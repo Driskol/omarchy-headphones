@@ -1,106 +1,77 @@
-"""Pins what samsung-bridge sends for the Galaxy Buds2.
+"""What samsung-bridge sends for the Galaxy Buds2.
 
-    python -m unittest tests/samsung_bridge_test.py
+    python -m unittest tests.samsung_bridge_test
 
-The Samsung row is the same kind of promise as the Sony and Soundcore ones:
-this headset answered one exact status payload, and the bridge may keep
-sending only those exact frames. The test below freezes the bytes the bridge
-writes on connect and on `set <mode>`, and it freezes the one status packet the
-device itself answered with.
+The frozen session is tests/pins/samsung/galaxy-buds2.json: the bytes the
+bridge writes on connect and on `set <mode>`, and the one status packet the
+device itself answered with. What is here is what is *not* read, and what a
+silent headset does.
 """
-import importlib.machinery
-import importlib.util
-import os
 import unittest
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-PATH = os.path.join(HERE, "..", "samsung-bridge")
-loader = importlib.machinery.SourceFileLoader("samsung_bridge", PATH)
-spec = importlib.util.spec_from_loader("samsung_bridge", loader)
-bridge_module = importlib.util.module_from_spec(spec)
-loader.exec_module(bridge_module)
+from tests import harness
 
-STATUS_FRAME = bytes.fromhex(
-  "fd2a00610b031212010111000000bf22010040014001030003660002001000000000110200010000400000993ddd"
+bridge_module = harness.load_bridge("samsung-bridge")
+
+STATUS_FRAME = (
+    "fd 2a 00 61 0b 03 12 12 01 01 11 00 00 00 bf 22 01 00 40 01 40 01 03 00 03 66"
+    " 00 02 00 10 00 00 00 00 11 02 00 01 00 00 40 00 00 99 3d dd"
 )
-STATUS_PAYLOAD = bytes.fromhex(
-  "0b031212010111000000bf22010040014001030003660002001000000000110200010000400000"
+STATUS_PAYLOAD = (
+    "0b 03 12 12 01 01 11 00 00 00 bf 22 01 00 40 01 40 01 03 00 03 66 00 02 00 10"
+    " 00 00 00 00 11 02 00 01 00 00 40 00 00"
 )
 
 
-class Session:
+class Session(harness.Session):
+    """A Samsung session. "device" in a pin is a whole frame as hex, FD to DD,
+    fed through the bridge's framer. "sent" is every whole frame the bridge
+    wrote, as hex. "open" sends the manager-info request, as the bridge does
+    the moment the channel opens."""
+
     def __init__(self):
-        self.frames = []
-        self.lines = []
-        bridge_module.emit = self.lines.append
-        loop = type("Loop", (), {"quit": lambda self: None})()
-        self.bridge = bridge_module.Bridge(None, "84:5F:04:B5:D6:74", loop)
+        super().__init__(bridge_module)
+        self.bridge = bridge_module.Bridge(None, "84:5F:04:B5:D6:74", harness.FakeLoop())
         self.bridge.write = self.frames.append
-        self.bridge.fd = 1
+        self.bridge.fd = -1
+
+    def device(self, spec):
+        self.bridge.buffer += harness.hexbytes(spec)
+        self.bridge.parse_buffer()
+
+    def do_open(self):
+        self.bridge.send_manager_info()
 
 
-class SamsungBridge(unittest.TestCase):
-    def test_manager_info_frame(self):
-        s = Session()
-        s.bridge.send_manager_info()
-        self.assertEqual([frame.hex() for frame in s.frames], [
-            "fd061088010122da58dd",
-        ])
+harness.pin_tests(globals(), "samsung-bridge", Session)
 
-    def test_status_packet_updates_mode_and_battery(self):
-        s = Session()
-        s.bridge.on_frame(STATUS_FRAME)
-        self.assertEqual(s.lines, [{
-            "modes": True,
-            "mode": "anc",
-            "available": ["off", "anc", "ambient"],
-            "battery": {
-                "left": 18,
-                "right": 18,
-                "case": 0,
-                "charging": [],
-            },
-        }])
 
-    def test_set_writes_the_observed_noise_control_frames(self):
-        s = Session()
-        for line in ("set off", "set anc", "set ambient", "set talkthru"):
-            s.bridge.command(line)
-        self.assertEqual([frame.hex() for frame in s.frames], [
-            "fd04107800f081dd",
-            "fd04107801d191dd",
-            "fd04107802b2a1dd",
-        ])
-        self.assertEqual(s.lines, [])
-
+class NotRead(unittest.TestCase):
     def test_a_plain_status_frame_is_not_read(self):
         # 0x60 has not been captured; the same bytes under that id say nothing.
         s = Session()
-        frame = bytearray(STATUS_FRAME)
+        frame = bytearray(harness.hexbytes(STATUS_FRAME))
         frame[3] = bridge_module.STATUS_UPDATED
         crc = bridge_module.crc16(bytes(frame[3:-3]))
         frame[-3:-1] = crc.to_bytes(2, "little")
-        s.bridge.on_frame(bytes(frame))
+        s.device(harness.hexstr(frame))
         self.assertEqual(s.lines, [])
 
-    def test_silence_after_the_request_parks_the_address(self):
-        s = Session()
-        s.bridge.send_manager_info()
-        s.bridge.status_timeout()
-        self.assertEqual(s.bridge.exit_code, bridge_module.EXIT_UNSUPPORTED)
-
     def test_parse_state_uses_the_observed_offsets(self):
-        self.assertEqual(bridge_module.parse_state(STATUS_PAYLOAD), {
+        self.assertEqual(bridge_module.parse_state(harness.hexbytes(STATUS_PAYLOAD)), {
             "modes": True,
             "mode": "anc",
             "available": ["off", "anc", "ambient"],
-            "battery": {
-                "left": 18,
-                "right": 18,
-                "case": 0,
-                "charging": [],
-            },
+            "battery": {"left": 18, "right": 18, "case": 0, "charging": []},
         })
+
+
+class Silent(unittest.TestCase):
+    def test_silence_after_the_request_parks_the_address(self):
+        s = Session()
+        s.do_open()
+        s.bridge.status_timeout()
+        self.assertEqual(s.bridge.exit_code, bridge_module.EXIT_UNSUPPORTED)
 
 
 if __name__ == "__main__":

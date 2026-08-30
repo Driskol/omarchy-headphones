@@ -1,0 +1,110 @@
+{
+  "model": "Sony WH-CH720N",
+  "owner": "ncr",
+  "bridge": "sony-bridge",
+  "notes": "0x17, MDR v2. Change this only with a CH720N in hand.",
+  "session": {
+    "uuid": "v2",
+    "name": "WH-CH720N"
+  },
+  "steps": [
+    {
+      "device": "01 00 03 00 10 02 00 00",
+      "note": "handshake: eight bytes, so the v2 questions come first, and 0x17 is the first"
+    },
+    {
+      "sent": [
+        "66 17"
+      ]
+    },
+    {
+      "lines": []
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": "67 17 01 01 01 00 14",
+      "note": "RET: changed, on, ambient, normal, level 20"
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "ambient",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 20,
+          "voice": false
+        }
+      ]
+    },
+    {
+      "command": "set off"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "level 5"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "voice on"
+    },
+    {
+      "ack": true
+    },
+    {
+      "sent": [
+        "66 17",
+        "68 17 01 00 00 00 14",
+        "68 17 01 01 00 00 14",
+        "68 17 01 01 01 00 14",
+        "68 17 01 01 01 00 05",
+        "68 17 01 01 01 01 14"
+      ],
+      "note": "every SET carries the mode, level and voice flag the headset last reported; the level 5 is gone again by the voice switch"
+    },
+    {
+      "line_count": 1,
+      "note": "nothing was read back and nothing reported: the headset's own notification is what the panel is shown"
+    },
+    {
+      "device": "69 17 01 01 01 01 05"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "ambient",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ],
+        "level": 5,
+        "voice": true
+      }
+    },
+    {
+      "exit": null
+    }
+  ]
+}

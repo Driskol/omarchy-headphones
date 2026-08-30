@@ -1,30 +1,19 @@
-"""Pins what soundcore-bridge sends to each model in MODELS.
+"""What soundcore-bridge sends to each model in MODELS.
 
-    python -m unittest tests/soundcore_bridge_test.py
+    python -m unittest tests.soundcore_bridge_test
 
-A row in MODELS is somebody's working headphones, and this is what keeps the
-next model from changing what theirs are sent. Every case scripts one session
-— the state packet the device answers the handshake with, a few widget
-commands, a notification — and asserts the exact outbound frames and stdout
-lines, frame for frame. A change that alters a pinned model's sequence has to
-alter its case here, in the open, and that is the moment to ask its owner.
+The frozen sessions — one per MODELS row, somebody's working headphones — are
+the pin files in tests/pins/soundcore/. What is here is the model lookup and
+the behaviour of UNKNOWN, the one row that may change.
 
 No hardware and no D-Bus: the bridge's only two effects on the world are
-`write()` and `emit()`, and both are captured. The state payloads are laid out
-from PROTOCOL.md rather than recorded — they pin the frames the bridge sends,
-which is the point, not the parsing of one particular unit's bytes.
+`write()` and `emit()`, and both are captured.
 """
-import importlib.machinery
-import importlib.util
-import os
 import unittest
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-PATH = os.path.join(HERE, "..", "soundcore-bridge")
-loader = importlib.machinery.SourceFileLoader("soundcore_bridge", PATH)
-spec = importlib.util.spec_from_loader("soundcore_bridge", loader)
-bridge_module = importlib.util.module_from_spec(spec)
-loader.exec_module(bridge_module)
+from tests import harness
+
+bridge_module = harness.load_bridge("soundcore-bridge")
 
 INBOUND_HDR = bytes([0x09, 0xFF, 0x00, 0x00, 0x01])
 
@@ -47,47 +36,27 @@ def state_payload(length, offset, six):
     return bytes(body)
 
 
-class FakeGLib:
-    """Records what the bridge schedules; the test decides when it fires."""
-
-    def __init__(self):
-        self.timers = []
-
-    def timeout_add(self, ms, fn, *args):
-        self.timers.append((ms, fn, args))
-        return len(self.timers)
-
-
-class Session:
-    """One bridge with its effects captured: frames out, lines out, timers."""
+class Session(harness.Session):
+    """A Soundcore session. "device" in a pin is {"cmd": "06 01", "body": hex}
+    — the command pair and the body, wrapped the way the device wraps them.
+    "sent" is every whole frame the bridge wrote, as hex."""
 
     def __init__(self, uuid):
-        self.sent = []
-        self.lines = []
-        self.glib = FakeGLib()
-        bridge_module.emit = self.lines.append
-        bridge_module.GLib = self.glib
-        loop = type("Loop", (), {"quit": lambda self: None})()
-        self.bridge = bridge_module.Bridge(None, "84:9D:4B:B0:2D:00", loop)
+        super().__init__(bridge_module)
+        self.bridge = bridge_module.Bridge(None, "84:9D:4B:B0:2D:00", harness.FakeLoop())
         self.bridge.model = bridge_module.model_for(uuid)
-        self.bridge.write = self.sent.append
+        self.bridge.write = self.frames.append
 
     def receive(self, frame):
         self.bridge.buffer += frame
         self.bridge.parse_buffer()
 
-    def command(self, line):
-        self.bridge.command(line)
+    def device(self, spec):
+        self.receive(inbound(harness.hexbytes(spec["cmd"]),
+                             harness.hexbytes(spec.get("body", ""))))
 
-    @property
-    def timers(self):
-        return [ms for ms, _fn, _args in self.glib.timers]
 
-    def fire(self):
-        """Run every scheduled timer, in order, once."""
-        pending, self.glib.timers = self.glib.timers, []
-        for _ms, fn, args in pending:
-            fn(*args)
+harness.pin_tests(globals(), "soundcore-bridge", Session)
 
 
 class ModelLookup(unittest.TestCase):
@@ -107,93 +76,18 @@ class ModelLookup(unittest.TestCase):
         self.assertIs(bridge_module.model_for("0cf12d31-fac3-4553-bd80-d6832e7ffff0"),
                       bridge_module.UNKNOWN)
 
+    def test_every_pinned_model_has_a_row(self):
+        for _path, pin in harness.pins_for("soundcore-bridge"):
+            row = bridge_module.model_for(pin["session"]["uuid"])
+            self.assertIsNot(row, bridge_module.UNKNOWN, pin["model"])
 
-class Space2(unittest.TestCase):
-    """d1402 — Sovego, PR #3. Frozen: change this only with a Space 2 in hand."""
 
-    UUID = "0cf12d31-fac3-4553-bd80-d6832e7d1402"
-    # 103-byte payload, sound modes at 71..77: ambient, level 3.
-    STATE = state_payload(103, 71, [0x01, 0x1F, 0xFF, 0x00, 0x00, 0x03])
-
-    def test_frozen_session(self):
-        s = Session(self.UUID)
-        SET = bridge_module.CMD_SOUND_MODES_SET
-        make = bridge_module.make_packet
-
-        s.receive(inbound((0x01, 0x01), self.STATE))
-        # The state is read in place; nothing is asked of the device.
-        self.assertEqual(s.sent, [])
-        self.assertEqual(s.lines, [{"modes": True, "mode": "ambient",
-                                    "available": ["off", "anc", "ambient"],
-                                    "level": 3, "voice": False}])
-
-        s.command("set anc")
-        s.receive(inbound((0x06, 0x81), []))                       # ACK
-        s.receive(inbound((0x06, 0x01), [0x00, 0x1F, 0xFF, 0, 0, 3]))  # its own notification
-        s.command("level 5")
-        s.command("voice on")
-
-        # The whole conversation, frame for frame.
-        self.assertEqual(s.sent, [
-            make(SET, bytes([0x00, 0x1F, 0xFF, 0x00, 0x00, 0x03])),
-            make(SET, bytes([0x00, 0x1F, 0xFF, 0x00, 0x00, 0x05])),
-            make(SET, bytes([0x00, 0x1F, 0xFF, 0x00, 0x01, 0x05])),
-        ])
-        self.assertEqual([(l["mode"], l["level"], l["voice"]) for l in s.lines],
-                         [("ambient", 3, False), ("anc", 3, False),
-                          ("anc", 5, False), ("anc", 5, True)])
-        # Nothing was scheduled to go out later, either.
-        self.assertEqual(s.timers, [])
-        self.assertIsNone(s.bridge.exit_code)
-
+class ShortState(unittest.TestCase):
     def test_short_state_is_unsupported(self):
-        s = Session(self.UUID)
+        s = Session("0cf12d31-fac3-4553-bd80-d6832e7d1402")
         s.receive(inbound((0x01, 0x01), bytes(40)))
         self.assertEqual(s.sent, [])
         self.assertEqual(s.bridge.exit_code, bridge_module.EXIT_UNSUPPORTED)
-
-
-class SpaceOnePro(unittest.TestCase):
-    """b3062 — sasiruLK, PR #5. Frozen: change this only with a One Pro in hand."""
-
-    UUID = "0cf12d31-fac3-4553-bd80-d6832e7b3062"
-    # 95-byte payload, the six bytes at 69..75: off, level 5. The 0x31 padding
-    # puts a plausible-looking 0x01 at 71 — read there, this is "ambient".
-    SIX = [0x02, 0x50, 0x01, 0x01, 0x00, 0x05]
-    STATE = state_payload(95, 69, SIX)
-
-    def test_frozen_session(self):
-        s = Session(self.UUID)
-        QUERY = bridge_module.CMD_SOUND_MODES_NOTIFY
-        SET = bridge_module.CMD_SOUND_MODES_SET
-        make = bridge_module.make_packet
-
-        s.receive(inbound((0x01, 0x01), self.STATE))
-        # Read at 69, then asked to confirm.
-        self.assertEqual(s.lines, [{"modes": True, "mode": "off",
-                                    "available": ["off", "anc", "ambient"],
-                                    "level": 5, "voice": False}])
-        self.assertEqual(s.sent, [make(QUERY)])
-        s.receive(inbound((0x06, 0x01), self.SIX))
-        self.assertEqual(len(s.lines), 1)                # same state, no repeat
-
-        # A set is followed by an ACK only; the bridge asks 400 ms later and
-        # the reply, not the optimism, is what reaches the panel.
-        s.command("set ambient")
-        s.receive(inbound((0x06, 0x81), []))
-        self.assertEqual(len(s.lines), 1)
-        self.assertEqual(s.timers, [400])
-        s.fire()
-        s.receive(inbound((0x06, 0x01), [0x01, 0x50, 0x01, 0x01, 0x00, 0x05]))
-
-        self.assertEqual(s.sent, [
-            make(QUERY),
-            make(SET, bytes([0x01, 0x50, 0x01, 0x01, 0x00, 0x05])),
-            make(QUERY),
-        ])
-        self.assertEqual([(l["mode"], l["level"]) for l in s.lines],
-                         [("off", 5), ("ambient", 5)])
-        self.assertIsNone(s.bridge.exit_code)
 
 
 class Unknown(unittest.TestCase):
@@ -212,12 +106,12 @@ class Unknown(unittest.TestCase):
 
         s.receive(inbound((0x01, 0x01), self.STATE))
         self.assertEqual(s.lines[0]["mode"], "ambient")   # 71: the wrong byte
-        self.assertEqual(s.sent, [make(QUERY)])
+        self.assertEqual(s.frames, [make(QUERY)])
         s.receive(inbound((0x06, 0x01), self.SIX))
         self.assertEqual(s.lines[-1]["mode"], "off")      # corrected
         # And the write carries the reply's five bytes, not the neighbours'.
         s.command("set anc")
-        self.assertEqual(s.sent[-1], make(SET, bytes([0x00, 0x50, 0x01, 0x01, 0x00, 0x05])))
+        self.assertEqual(s.frames[-1], make(SET, bytes([0x00, 0x50, 0x01, 0x01, 0x00, 0x05])))
         self.assertEqual(s.timers, [400])
 
     def test_silent_device_is_asked_once(self):
@@ -227,7 +121,7 @@ class Unknown(unittest.TestCase):
         s.receive(inbound((0x01, 0x01), state_payload(103, 71, [0x01, 0x1F, 0xFF, 0, 0, 3])))
         s.command("set anc")
         # Never answered 06 01, so nothing is asked after the write.
-        self.assertEqual([f for f in s.sent if f == make(QUERY)], [make(QUERY)])
+        self.assertEqual([f for f in s.frames if f == make(QUERY)], [make(QUERY)])
         self.assertEqual(s.timers, [])
 
 
