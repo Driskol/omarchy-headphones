@@ -133,50 +133,38 @@ open a pull request against `github.com/ncr/omarchy-headphones` with the result.
    Google Fast Pair Message Stream (battery), `956c7b26-d49a-4ba8-b03f-b17d393cb6e2`
    is Sony MDR v2 and `96cc203e-5068-46ad-b32d-e316f5e069ba` Sony MDR v1 (both
    noise control), `2e73a4ad-332d-41fc-90e2-16bef06523f2` is Samsung SPPNew,
-   `aeac4a03-dff5-498f-843a-34487cf133eb` is Nothing NT Link;
+   `aeac4a03-dff5-498f-843a-34487cf133eb` is Nothing NT Link, a UUID
+   starting `0cf12d31-fac3-4553-bd80-d6832e7` is Soundcore's vendor channel;
    JBL earbuds are probed over BLE by the plugin itself.
 2. If battery and the mode row both already work, nothing needs
    writing: the pull request is my device's row in the table in `README.md` —
    device, two ticks, my GitHub handle — plus the screenshot from step 4.
-3. Otherwise extend the plugin. Read `PROTOCOL.md` and the docstrings of
-   `sony-bridge`, `nothing-bridge` and `jbl-bridge` first — they show how the
-   existing channels were found and what the bridge contract is. Find the
-   channel the vendor's own app uses (the probes in `tools/`, an open-source
-   client for the brand, an HCI snoop), write a `brand-bridge` modelled on
-   `sony-bridge` with the same stdout/stdin/exit-code contract, add its UUID to
-   `controlBackend()` in `Model.js` and its path to `classicBridgePath` in
-   `DeviceFollower.qml`, test it on my headphones with `omarchy restart shell`,
-   and add my device to the table, noting what the device answered in
-   `PROTOCOL.md`.
+3. Otherwise extend the plugin. Read `AGENTS.md` in the plugin directory
+   first: it is the map — which files a new model or a new brand touches,
+   the bridge contract (`BRIDGE.md`), how a session is pinned
+   (`tests/pins/`), and `tools/check`, the one command that runs everything
+   a pull request is held to. Run `tools/check` until it passes; CI runs the
+   same script on the pull request.
 
-   One fact shapes how this plugin is written: nobody has more than their own
-   headphones. The maintainer cannot test yours, you cannot test anybody
-   else's, and every model in the table works today on frames that only its
-   owner can retest. So two rules hold whatever brand this is, and a pull
-   request that breaks either will be sent back:
+   Two rules hold whatever brand this is, because nobody has more than their
+   own headphones — the maintainer cannot test mine and I cannot test
+   anybody else's — and a pull request that breaks either will be sent back:
 
-   **A new model may not change what an existing one is sent.** Somebody else's
-   headphones work today on frames nobody here can retest. So a
-   model gets its own row — `MODELS` in `soundcore-bridge` and in `sony-bridge`, an
-   inquired type in `sony-bridge` — and adding it adds a row; it does not edit another one, and
-   it does not turn a value that was always sent into one that is now decided.
-   Where something must be decided, let it widen rather than narrow: prefer
-   asking one more question to asking one fewer.
+   **A new model may not change what an existing one is sent.** Somebody
+   else's headphones work today on frames nobody here can retest. A model
+   gets its own row (`MODELS` in its bridge) and its own pin file
+   (`tests/pins/<brand>/<model>.json`, the frozen session of its owner's
+   headphones); adding mine adds a row and a file, it does not edit another
+   owner's. Where something must be decided, let it widen rather than
+   narrow: prefer asking one more question to asking one fewer.
 
    **Ship only what you saw the headphones answer — no guessed bytes.** A
-   variant from a vendor table that your headset never answered stays out, in
-   the code and in `PROTOCOL.md` both.
+   variant from a vendor table that my headset never answered stays out, in
+   the code and in `PROTOCOL.md` both. Keep the probe's output as
+   `docs/captures/<brand>-<model>.txt` and name it from the pin.
 
-   Pin it with a test, which is how the two rules survive the next pull request:
-   `python -m unittest tests/sony_bridge_test.py` if you touched `sony-bridge`,
-   `tests/soundcore_bridge_test.py` for `soundcore-bridge`, `deno test
-   --allow-read tests/model.test.js` if you touched `Model.js`. Each bridge test
-   scripts one session per model and asserts the exact frames — add your model's
-   case, leave the others' bytes alone, and run the lot. A bridge with no test
-   file yet is the moment to write one, modelled on those two.
-
-   Mind that any file written inside the plugin directory reloads the plugin at
-   once — edit elsewhere and move files in, as the tools in `tools/` do.
+   Mind that any file written inside the plugin directory reloads the plugin
+   at once — edit elsewhere and move files in, as the tools in `tools/` do.
 4. Take the screenshot: `tools/gallery-shot <which>` — the `gallery-screenshot`
    skill in `.claude/skills/` has the steps — and add it to the Gallery at the
    bottom of `README.md` with the device name and my handle. The screenshot is
