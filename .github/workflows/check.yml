@@ -1,0 +1,23 @@
+# tools/check, on every push to main and every pull request. The same list
+# the maintainer runs before a merge; a contributor sees it here before the
+# maintainer does.
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: git fetch --no-tags origin main:refs/remotes/origin/main
+      - run: CHECK_BASE=origin/main tools/check

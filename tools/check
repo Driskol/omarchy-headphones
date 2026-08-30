@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# Everything a pull request to Omaphones is held to, in one command.
+#
+#   tools/check                  # compares pins with origin/main, or main
+#   CHECK_BASE=main tools/check  # or with a branch of your choosing
+#
+# The same list runs here, in CI (.github/workflows/check.yml) and in the
+# merge-pr skill, so nobody keeps a list of their own. One line per check;
+# exit 1 if any failed. A check whose tool this machine lacks is skipped and
+# says so: CI has Python and Deno but no Omarchy shell, a contributor's
+# machine tends to be the other way round, and between them the list is
+# covered.
+set -u
+cd "$(dirname "$0")/.." || exit 1
+# A file written inside the plugin directory reloads the plugin. Python must
+# not leave bytecode behind.
+export PYTHONDONTWRITEBYTECODE=1
+
+failed=0
+ok()   { printf 'ok       %s\n' "$1"; }
+skip() { printf 'skipped  %s\n' "$1"; }
+fail() { printf 'FAIL     %s\n' "$1"; failed=1; }
+
+bridges=$(ls ./*-bridge)
+
+# ---- Python parses. ast rather than py_compile, which writes __pycache__.
+if out=$(python3 -c 'import ast, sys
+for path in sys.argv[1:]:
+    ast.parse(open(path).read(), path)' $bridges gfps-reader tools/*.py tests/*.py 2>&1); then
+  ok "python syntax"
+else
+  fail "python syntax"; echo "$out"
+fi
+
+# ---- The bridge tests, pins included.
+if out=$(python3 -m unittest discover -s tests -t . -p '*_test.py' 2>&1); then
+  ok "bridge tests ($(echo "$out" | grep -o 'Ran [0-9]* tests'))"
+else
+  fail "bridge tests"; echo "$out" | tail -40
+fi
+
+# ---- Model.js.
+if command -v deno >/dev/null 2>&1; then
+  if out=$(deno test --allow-read tests/model.test.js 2>&1); then
+    ok "Model.js tests"
+  else
+    fail "Model.js tests"; echo "$out" | tail -40
+  fi
+else
+  skip "Model.js tests: deno is not on this machine (https://deno.land); CI runs them"
+fi
+
+# ---- Every bridge has a test file and a pin; every pin is well formed and
+#      belongs to a bridge that exists.
+for bridge in $bridges; do
+  brand=$(basename "$bridge"); brand=${brand%-bridge}
+  [ -f "tests/${brand}_bridge_test.py" ] || fail "$brand-bridge has no tests/${brand}_bridge_test.py"
+  ls "tests/pins/$brand"/*.json >/dev/null 2>&1 || fail "$brand-bridge has no pin under tests/pins/$brand/"
+done
+if out=$(python3 - <<'PY'
+import glob, json, os, sys
+problems = []
+for path in sorted(glob.glob("tests/pins/*/*.json")):
+    brand = os.path.basename(os.path.dirname(path))
+    try:
+        pin = json.load(open(path))
+    except ValueError as error:
+        problems.append("%s: not JSON: %s" % (path, error)); continue
+    for key in ("model", "owner", "bridge", "steps"):
+        if key not in pin:
+            problems.append("%s: no %r" % (path, key))
+    if pin.get("bridge") != brand + "-bridge":
+        problems.append("%s: says bridge %r, sits under %s/" % (path, pin.get("bridge"), brand))
+    if not os.path.exists(brand + "-bridge"):
+        problems.append("%s: there is no %s-bridge" % (path, brand))
+    capture = pin.get("capture")
+    if capture and not os.path.exists(capture):
+        problems.append("%s: names capture %s, which does not exist" % (path, capture))
+for line in problems:
+    print(line)
+sys.exit(1 if problems else 0)
+PY
+); then ok "pins well formed"; else fail "pins well formed"; echo "$out"; fi
+
+# ---- Pins may be added, never edited or removed: each is somebody's
+#      working headphones, and nobody here can retest another owner's model.
+base=${CHECK_BASE:-}
+if [ -z "$base" ]; then
+  if git rev-parse -q --verify origin/main >/dev/null 2>&1; then base=origin/main
+  elif git rev-parse -q --verify main >/dev/null 2>&1; then base=main
+  fi
+fi
+if [ -z "$base" ]; then
+  skip "pins unchanged: no main to compare with"
+elif [ "$(git rev-parse HEAD)" = "$(git rev-parse "$base")" ] && git diff --quiet -- tests/pins; then
+  skip "pins unchanged: this is $base"
+else
+  since=$(git merge-base "$base" HEAD)
+  changed=$(git diff --diff-filter=MDR --name-only "$since" -- tests/pins)
+  if [ -z "$changed" ]; then
+    ok "pins unchanged since $base"
+  else
+    for path in $changed; do
+      owner=$(git show "$since:$path" 2>/dev/null | python3 -c 'import json, sys
+try: print(json.load(sys.stdin).get("owner", "?"))
+except Exception: print("?")')
+      fail "$path changed — it is @$owner's headphones. A pin may be added, never edited; if @$owner has checked this change on their headphones, say so in the pull request and the maintainer takes it from there"
+    done
+  fi
+fi
+
+# ---- No install commands anywhere: the marketplace's scanner greps the
+#      repository for the literal words and sends a hit to manual review.
+#      (The pattern here spells them so as not to be a hit itself.)
+if hits=$(grep -rn -i -E 's[u]do|p[a]cman|\by[a]y\b' --exclude-dir=.git --exclude-dir=__pycache__ . 2>/dev/null) && [ -n "$hits" ]; then
+  fail "install-command words in the repository:"; echo "$hits"
+else
+  ok "no install-command words"
+fi
+
+# ---- README's gallery and docs/gallery agree.
+if out=$(python3 - <<'PY'
+import os, re, sys
+text = open("README.md").read()
+referenced = set(re.findall(r'docs/gallery/[^")\s]+', text))
+present = {"docs/gallery/" + name for name in os.listdir("docs/gallery")} if os.path.isdir("docs/gallery") else set()
+problems = ["README refers to %s, which does not exist" % p for p in sorted(referenced - present)]
+problems += ["%s is not in README's gallery" % p for p in sorted(present - referenced)]
+for line in problems:
+    print(line)
+sys.exit(1 if problems else 0)
+PY
+); then ok "gallery files and README agree"; else fail "gallery files and README agree"; echo "$out"; fi
+
+# ---- manifest.json parses and has a version.
+if out=$(python3 -c 'import json; m = json.load(open("manifest.json")); assert m["version"]' 2>&1); then
+  ok "manifest.json ($(python3 -c 'import json; print(json.load(open("manifest.json"))["version"])'))"
+else
+  fail "manifest.json"; echo "$out"
+fi
+
+# ---- The shell's own checks, where the shell is.
+if command -v qmllint >/dev/null 2>&1 && [ -d /usr/share/omarchy/shell ]; then
+  # Service.qml's typed IPC functions trip qmllint; the other two are clean.
+  if out=$(qmllint -I /usr/share/omarchy/shell DeviceFollower.qml Panel.qml 2>&1); then
+    ok "qmllint DeviceFollower.qml Panel.qml"
+  else
+    fail "qmllint"; echo "$out" | tail -20
+  fi
+else
+  skip "qmllint: no Omarchy shell on this machine"
+fi
+if command -v omarchy >/dev/null 2>&1; then
+  if out=$(omarchy plugin validate . 2>&1); then
+    ok "omarchy plugin validate"
+  else
+    fail "omarchy plugin validate"; echo "$out" | tail -20
+  fi
+else
+  skip "omarchy plugin validate: no Omarchy on this machine"
+fi
+
+if [ "$failed" -ne 0 ]; then
+  echo
+  echo "Something above failed. AGENTS.md says what each check is for."
+fi
+exit $failed
