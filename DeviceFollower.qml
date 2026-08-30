@@ -128,7 +128,7 @@ Item {
   readonly property string modelId: String(reading.modelId || "")
   readonly property string bleAddress: String(reading.bleAddress || "")
 
-  // ---- Listening mode. Four devices, four protocols, one piece of state: the
+  // ---- Listening mode. Six brands, six protocols, one piece of state: the
   //      panel shows a mode and writes a mode, and which helper carries it is
   //      decided per device from the UUIDs in its SDP record.
   //
@@ -154,24 +154,14 @@ Item {
   //      share one connection; this follower talks to it through its stdin, and
   //      the bridges report on the same contract into the same state.
   //
-  //      The three Classic-channel bridges take the same argument, report the
-  //      same lines and end the same four ways, so one Process runs whichever
-  //      of them the backend names; only the JBL one, which dials a BLE address
-  //      the reader announces, has a lifecycle of its own.
+  //      The Classic-channel bridges take the same arguments, report the same
+  //      lines and end the same four ways, so one Process runs whichever of
+  //      them the backend names — the file and the arguments are the backend's
+  //      row in BACKENDS in Model.js; only the JBL one, which dials a BLE
+  //      address the reader announces, has a lifecycle of its own.
   readonly property string jblBridgePath: service ? service.jblBridgePath : ""
-  readonly property string sonyBridgePath: service ? service.sonyBridgePath : ""
-  readonly property string samsungBridgePath: service ? service.samsungBridgePath : ""
-  readonly property string nothingBridgePath: service ? service.nothingBridgePath : ""
-  readonly property string xiaomiBridgePath: service ? service.xiaomiBridgePath : ""
-  readonly property string soundcoreBridgePath: service ? service.soundcoreBridgePath : ""
-  readonly property string classicBridgePath: {
-    if (controlBackend === "sony") return sonyBridgePath
-    if (controlBackend === "samsung") return samsungBridgePath
-    if (controlBackend === "nothing") return nothingBridgePath
-    if (controlBackend === "xiaomi") return xiaomiBridgePath
-    if (controlBackend === "soundcore") return soundcoreBridgePath
-    return ""
-  }
+  readonly property string classicBridgePath: service && classicBackend
+    ? service.bridgePathFor(controlBackend) : ""
   property var ancState: ({})
   property bool ancEnabled: true
   readonly property bool jblWanted: useModeControl && useFastPair && ancEnabled && connected
@@ -282,10 +272,10 @@ Item {
   //      room; Soundcore's runs 1-5 and its switch cuts wind noise. Both are
   //      "how much comes through, and one filter on it", so they share a row
   //      and the panel takes the numbers and the label from here.
-  readonly property int ambientMin: controlBackend === "soundcore" ? 1 : 0
-  readonly property int ambientMax: controlBackend === "soundcore" ? 5 : 20
-  readonly property string ambientVoiceLabel: controlBackend === "soundcore"
-    ? "Wind noise reduction" : "Focus on voice"
+  readonly property var ambientRange: Model.ambientRange(controlBackend)
+  readonly property int ambientMin: ambientRange.min
+  readonly property int ambientMax: ambientRange.max
+  readonly property string ambientVoiceLabel: ambientRange.voice
 
   readonly property int bluezLevel: Model.batteryLevel(device)
   // The bar carries one number: the headset's own figure where there is only
@@ -665,7 +655,8 @@ Item {
     // an empty address, exited 4 and parked a working model for the session.
     // One turn of the event loop later every binding has caught up.
     running: follower.jblArmed
-    command: [follower.jblBridgePath, follower.bleAddress, follower.modelId]
+    command: [follower.jblBridgePath].concat(Model.bridgeArgs("jbl",
+      { bleAddress: follower.bleAddress, modelId: follower.modelId }))
     stdinEnabled: true
     stdout: SplitParser {
       onRead: function(line) { follower.applyAncLine(line) }
@@ -737,14 +728,14 @@ Item {
   Process {
     id: classicBridge
     running: follower.classicArmed
-    // Every classic bridge takes the address; sony-bridge takes the UUID after
-    // it, and defaults to v2 without one, which is what it was always sent, and
-    // then the reported name, which picks its row in the bridge's MODELS.
+    // The arguments are the backend's row in BACKENDS: every classic bridge
+    // takes the address; sony-bridge takes the UUID after it, and defaults to
+    // v2 without one, which is what it was always sent, and then the reported
+    // name, which picks its row in the bridge's MODELS.
     command: follower.classicBridgePath === ""
       ? ["true"]
-      : (follower.sonyUuid !== ""
-        ? [follower.classicBridgePath, follower.address, follower.sonyUuid, follower.reportedName]
-        : [follower.classicBridgePath, follower.address])
+      : [follower.classicBridgePath].concat(Model.bridgeArgs(follower.controlBackend, {
+          address: follower.address, uuid: follower.sonyUuid, name: follower.reportedName }))
     stdinEnabled: true
     stdout: SplitParser {
       onRead: function(line) { follower.applyAncLine(line) }

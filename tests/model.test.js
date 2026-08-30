@@ -778,3 +778,148 @@ Deno.test("bridge battery reads what the line carried and nothing more", () => {
   assertEquals(Model.bridgeCaseStale({ battery: { case: 50 } }), false);
   assertEquals(Model.bridgeCaseStale(null), false);
 });
+
+// ---- BACKENDS: the brand table the shell reads instead of a chain of ifs.
+
+Deno.test("every backend row names a bridge that exists, with a test file and a pin", () => {
+  const root = new URL("../", import.meta.url);
+  for (const row of Model.BACKENDS) {
+    assertEquals(typeof row.name, "string", "name");
+    assertEquals(row.bridge, row.name + "-bridge", row.name + ": bridge file name");
+    assertEquals(Deno.statSync(new URL(row.bridge, root)).isFile, true, row.bridge);
+    assertEquals(
+      Deno.statSync(new URL("tests/" + row.name + "_bridge_test.py", root)).isFile,
+      true,
+      row.name + " test file",
+    );
+    const pins = [...Deno.readDirSync(new URL("tests/pins/" + row.name + "/", root))]
+      .filter((entry) => entry.name.endsWith(".json"));
+    assertEquals(pins.length > 0, true, row.name + " has a pin");
+    assertEquals(Array.isArray(row.args), true, row.name + " args");
+    assertEquals(!!row.ble || !!row.uuids || !!row.uuidPrefix, true, row.name + " claims something");
+  }
+});
+
+Deno.test("no two backend rows claim the same UUID, and each row's claim picks that row", () => {
+  const seen = new Map();
+  for (const row of Model.BACKENDS) {
+    for (const id of row.uuids || []) {
+      assertEquals(seen.has(id), false, id + " claimed by " + seen.get(id) + " and " + row.name);
+      seen.set(id, row.name);
+      // Alone, and next to a Fast Pair address, which must not outrank it.
+      assertEquals(Model.controlBackend([id], ""), row.name);
+      assertEquals(Model.controlBackend([id], "48:B4:41:00:00:01"), row.name);
+    }
+    if (row.uuidPrefix) {
+      assertEquals(Model.controlBackend([row.uuidPrefix + "d1402"], "48:B4:41:00:00:01"), row.name);
+    }
+  }
+  assertEquals(Model.controlBackend([], "48:B4:41:00:00:01"), "jbl");
+  assertEquals(Model.controlBackend([], ""), "");
+});
+
+// The SDP records of devices that work today. The Xiaomi list is the one
+// PROTOCOL.md prints from bluetoothctl; the other three are put together from
+// the UUIDs PROTOCOL.md names for the device plus the standard audio profiles,
+// not copied from a printout. A new brand's claim must leave each of these
+// where it is. Add your device's list — the real one, from `bluetoothctl info`
+// — with your row.
+const DEVICES = [
+  {
+    model: "Xiaomi Buds 5 Pro",
+    backend: "xiaomi",
+    uuids: [
+      "00001100-d102-11e1-9b23-00025b00a5a5",
+      "00001101-0000-1000-8000-00805f9b34fb",
+      "00000837-d103-0004-bf7f-2942153d354b",
+      "2587db3c-ce70-4fc9-935f-777ab4188fd7",
+    ],
+    bleAddress: "",
+  },
+  {
+    model: "Samsung Galaxy Buds2",
+    backend: "samsung",
+    uuids: [
+      "0000110b-0000-1000-8000-00805f9b34fb",
+      "0000111e-0000-1000-8000-00805f9b34fb",
+      "df21fe2c-2515-4fdb-8886-f12c4d67927c",
+      "2e73a4ad-332d-41fc-90e2-16bef06523f2",
+    ],
+    bleAddress: "48:B4:41:00:00:01",
+  },
+  {
+    model: "Nothing Ear (a)",
+    backend: "nothing",
+    uuids: [
+      "0000110b-0000-1000-8000-00805f9b34fb",
+      "df21fe2c-2515-4fdb-8886-f12c4d67927c",
+      "aeac4a03-dff5-498f-843a-34487cf133eb",
+    ],
+    bleAddress: "48:B4:41:00:00:01",
+  },
+  {
+    model: "Sony WH-1000XM4",
+    backend: "sony",
+    uuids: [
+      "0000110b-0000-1000-8000-00805f9b34fb",
+      "df21fe2c-2515-4fdb-8886-f12c4d67927c",
+      "96cc203e-5068-46ad-b32d-e316f5e069ba",
+    ],
+    bleAddress: "48:B4:41:00:00:01",
+  },
+];
+
+Deno.test("the devices that work today still get their backend", () => {
+  for (const device of DEVICES) {
+    assertEquals(Model.controlBackend(device.uuids, device.bleAddress), device.backend, device.model);
+  }
+});
+
+Deno.test("isClassicBackend is every row but the BLE one", () => {
+  for (const row of Model.BACKENDS) {
+    assertEquals(Model.isClassicBackend(row.name), !row.ble, row.name);
+  }
+});
+
+Deno.test("bridgeFor names the row's file, and nothing for a backend with no row", () => {
+  assertEquals(Model.bridgeFor("sony"), "sony-bridge");
+  assertEquals(Model.bridgeFor("jbl"), "jbl-bridge");
+  assertEquals(Model.bridgeFor(""), "");
+  assertEquals(Model.bridgeFor("nope"), "");
+  assertEquals(Model.bridgeFor(null), "");
+});
+
+Deno.test("bridgeArgs is what each bridge was always sent", () => {
+  const known = {
+    address: "94:DB:56:D0:F0:F0",
+    uuid: Model.SONY_MDR_V1_UUID,
+    name: "WH-1000XM4",
+    bleAddress: "48:B4:41:00:00:01",
+    modelId: "0x1234",
+  };
+  // sony-bridge: address, the MDR generation, the reported name.
+  assertEquals(Model.bridgeArgs("sony", known), ["94:DB:56:D0:F0:F0", Model.SONY_MDR_V1_UUID, "WH-1000XM4"]);
+  // No name known yet is "" — the nameless caller sony-bridge treats as the
+  // old one — never a missing argument.
+  assertEquals(
+    Model.bridgeArgs("sony", { address: "94:DB:56:D0:F0:F0", uuid: Model.SONY_MDR_V2_UUID }),
+    ["94:DB:56:D0:F0:F0", Model.SONY_MDR_V2_UUID, ""],
+  );
+  // Every other classic bridge: the address alone.
+  for (const name of ["samsung", "nothing", "xiaomi", "soundcore"]) {
+    assertEquals(Model.bridgeArgs(name, known), ["94:DB:56:D0:F0:F0"], name);
+  }
+  // jbl-bridge: the BLE address and the Fast Pair model.
+  assertEquals(Model.bridgeArgs("jbl", known), ["48:B4:41:00:00:01", "0x1234"]);
+  assertEquals(Model.bridgeArgs("jbl", { bleAddress: "48:B4:41:00:00:01" }), ["48:B4:41:00:00:01", ""]);
+  assertEquals(Model.bridgeArgs("", known), []);
+  assertEquals(Model.bridgeArgs("nope", known), []);
+});
+
+Deno.test("ambientRange is Soundcore's dial on Soundcore and Sony's everywhere else", () => {
+  assertEquals(Model.ambientRange("soundcore"), { min: 1, max: 5, voice: "Wind noise reduction" });
+  assertEquals(Model.ambientRange("sony"), { min: 0, max: 20, voice: "Focus on voice" });
+  for (const name of ["jbl", "nothing", "xiaomi", "samsung", "", "nope"]) {
+    assertEquals(Model.ambientRange(name), { min: 0, max: 20, voice: "Focus on voice" }, name);
+  }
+});
