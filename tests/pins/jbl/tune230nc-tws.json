@@ -1,0 +1,113 @@
+{
+  "model": "JBL TUNE230NC TWS",
+  "owner": "ncr",
+  "bridge": "jbl-bridge",
+  "notes": "BLE GATT through btgatt-client. Every frame here was observed on the earbuds \u2014 PROTOCOL.md's table of confirmed exchanges.",
+  "session": {},
+  "steps": [
+    {
+      "device": "Connecting to device... Done"
+    },
+    {
+      "device": "GATT discovery procedures complete"
+    },
+    {
+      "call": "start"
+    },
+    {
+      "wait_sent": 1
+    },
+    {
+      "sent": [
+        "register-notify 0x000c"
+      ]
+    },
+    {
+      "device": "Registered notify handler"
+    },
+    {
+      "wait_sent": 3
+    },
+    {
+      "sent": [
+        "register-notify 0x000c",
+        "write-value 0x0010 0xaa 0x9b 0x02 0x01 0x01",
+        "write-value 0x0010 0xaa 0x91 0x01 0x11"
+      ],
+      "note": "enable notifications, then ask for the mode"
+    },
+    {
+      "device": "\tHandle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 00 02 01 03 00",
+      "note": "the state found on arrival: Ambient Aware"
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "ambient"
+        }
+      ]
+    },
+    {
+      "call": "wait_start"
+    },
+    {
+      "state": {
+        "start_code": null
+      }
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "sent_last": "write-value 0x0010 0xaa 0x91 0x07 0x10 0x01 0x01 0x02 0x00 0x03 0x00"
+    },
+    {
+      "device": "\tHandle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 01 02 00 03 00",
+      "note": "a set is answered by a report; nothing is read back"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "anc"
+      }
+    },
+    {
+      "device": "\tHandle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 01 02 00 03 00"
+    },
+    {
+      "line_count": 2,
+      "note": "the same mode again is not repeated"
+    },
+    {
+      "command": "set talkthru"
+    },
+    {
+      "sent_last": "write-value 0x0010 0xaa 0x91 0x07 0x10 0x01 0x00 0x02 0x00 0x03 0x01"
+    },
+    {
+      "command": "set off"
+    },
+    {
+      "sent_last": "write-value 0x0010 0xaa 0x91 0x07 0x10 0x01 0x00 0x02 0x00 0x03 0x00"
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "sent_last": "write-value 0x0010 0xaa 0x91 0x07 0x10 0x01 0x00 0x02 0x01 0x03 0x00"
+    },
+    {
+      "device": "\tHandle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 00 02 00 03 00"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "off"
+      }
+    },
+    {
+      "exit": null
+    }
+  ]
+}
