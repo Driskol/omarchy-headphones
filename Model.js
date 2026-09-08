@@ -444,6 +444,7 @@ var SAMSUNG_SPP_UUID = "2e73a4ad-332d-41fc-90e2-16bef06523f2"
 var NOTHING_NT_LINK_UUID = "aeac4a03-dff5-498f-843a-34487cf133eb"
 var CSR_GAIA_UUID = "00001100-d102-11e1-9b23-00025b00a5a5"
 var SOUNDCORE_UUID_PREFIX = "0cf12d31-fac3-4553-bd80-d6832e7"
+var OPPO_HEYMELODY_UUID = "0000079a-d102-11e1-9b23-00025b00a5a5"
 
 // The UUIDs `bluetoothctl info <address>` printed, lowercased.
 // Quickshell.Bluetooth exposes no uuids property, so the SDP record is read the
@@ -502,6 +503,8 @@ var BACKENDS = [
   { name: "soundcore", bridge: "soundcore-bridge",
     uuidPrefix: SOUNDCORE_UUID_PREFIX, args: ["address"],
     ambient: { min: 1, max: 5, voice: "Wind noise reduction" } },
+  { name: "oppo", bridge: "oppo-bridge",
+    uuids: [OPPO_HEYMELODY_UUID], args: ["address"] },
   { name: "jbl", bridge: "jbl-bridge",
     ble: true, args: ["bleAddress", "modelId"] }
 ]

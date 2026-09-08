@@ -906,7 +906,7 @@ Deno.test("bridgeArgs is what each bridge was always sent", () => {
     ["94:DB:56:D0:F0:F0", Model.SONY_MDR_V2_UUID, ""],
   );
   // Every other classic bridge: the address alone.
-  for (const name of ["samsung", "nothing", "xiaomi", "soundcore"]) {
+  for (const name of ["samsung", "nothing", "xiaomi", "soundcore", "oppo"]) {
     assertEquals(Model.bridgeArgs(name, known), ["94:DB:56:D0:F0:F0"], name);
   }
   // jbl-bridge: the BLE address and the Fast Pair model.
@@ -919,7 +919,34 @@ Deno.test("bridgeArgs is what each bridge was always sent", () => {
 Deno.test("ambientRange is Soundcore's dial on Soundcore and Sony's everywhere else", () => {
   assertEquals(Model.ambientRange("soundcore"), { min: 1, max: 5, voice: "Wind noise reduction" });
   assertEquals(Model.ambientRange("sony"), { min: 0, max: 20, voice: "Focus on voice" });
-  for (const name of ["jbl", "nothing", "xiaomi", "samsung", "", "nope"]) {
+  for (const name of ["jbl", "nothing", "xiaomi", "samsung", "oppo", "", "nope"]) {
     assertEquals(Model.ambientRange(name), { min: 0, max: 20, voice: "Focus on voice" }, name);
   }
+});
+
+Deno.test("controlBackend picks oppo from the HeyMelody UUID", () => {
+  const oppo = ["00001101-0000-1000-8000-00805f9b34fb", Model.OPPO_HEYMELODY_UUID];
+  assertEquals(Model.controlBackend(oppo, ""), "oppo");
+  // A Fast Pair address does not outrank the device's own record.
+  assertEquals(Model.controlBackend(oppo, "48:B4:41:00:00:01"), "oppo");
+  assertEquals(Model.controlBackend([Model.OPPO_HEYMELODY_UUID.toUpperCase()], ""), "oppo");
+  // Every earlier backend wins over it; it wins over the JBL fallback.
+  assertEquals(
+    Model.controlBackend([Model.OPPO_HEYMELODY_UUID, Model.SONY_MDR_V2_UUID], ""),
+    "sony",
+  );
+  assertEquals(
+    Model.controlBackend([Model.SAMSUNG_SPP_UUID, Model.OPPO_HEYMELODY_UUID], ""),
+    "samsung",
+  );
+  assertEquals(
+    Model.controlBackend([Model.NOTHING_NT_LINK_UUID, Model.OPPO_HEYMELODY_UUID], ""),
+    "nothing",
+  );
+  assertEquals(
+    Model.controlBackend([Model.CSR_GAIA_UUID, Model.OPPO_HEYMELODY_UUID], ""),
+    "xiaomi",
+  );
+  assertEquals(Model.controlBackend([Model.OPPO_HEYMELODY_UUID, Model.SOUNDCORE_UUID_PREFIX + "d1402"], ""), "soundcore");
+  assertEquals(Model.isClassicBackend("oppo"), true);
 });

@@ -1,0 +1,588 @@
+#!/usr/bin/env python3
+"""Hold one HeyMelody RFCOMM link to OPPO earbuds and mirror the listening mode.
+
+    oppo-bridge <classic-address>
+
+Prints one JSON object per line, and reads one command per line:
+
+    stdout   {"modes": true, "mode": "anc", "available": ["off","anc","ambient"]}
+             {"modes": true, "mode": "anc", "available": ["off","anc","ambient"],
+              "battery": {"left": 80, "right": 80, "charging": []}}
+             {"modes": false, "error": "..."}
+    stdin    set off | set anc | set ambient
+
+Exit codes, which the shell-side service reads to decide what to do next:
+
+    0   clean stop: SIGTERM/SIGINT, or the widget closed the pipe
+    1   transient: the profile never connected, the handshake went unanswered,
+        or the channel closed under us. Says nothing about the buds, so the
+        service retries with a growing pause
+    3   linked but silent: connected, asked, heard nothing. This device speaks
+        HeyMelody but not this part of it, so the service parks the address
+    4   setup failure: bad arguments, or python-dbus/PyGObject missing. About
+        this machine, not about the buds
+
+Sibling of sony-bridge and xiaomi-bridge: the same stdout/stdin/exit-code
+contract, a different channel. OPPO, OnePlus and Realme earbuds serve the
+HeyMelody SPP UUID (0000079a-d102-11e1-9b23-00025b00a5a5), which is how the
+widget picks this backend; BlueZ does the SDP lookup and hands over the
+connected socket, the same arrangement as the Sony and Xiaomi bridges.
+
+Protocol, confirmed on an OPPO Enco Air3 Pro (product id 065C10) — see
+PROTOCOL.md and the reference probe in tools/oppo_probe.py, which is what
+these frames were read off:
+
+    frame    AA <len varint> 00 00 <cmd u16le> <seq u8> <paylen u16le> <payload>
+             len is 7 + paylen for every frame here (single-byte varint)
+    query    0x010C payload 01 01, answered 0x810C with 00 01 01 <v1> [<v2>]
+    set      0x0404 payload 01 01 <mode>, acked 0x8404 with 00; a GET after
+             the SET names the new state
+    battery  0x0106 empty, answered 0x8106 with 00 <count> [index, value] pairs;
+             index 1 left, 2 right, 3 case; bit 7 of the value is charging
+
+SET/GET values, and the name the panel uses. Each SET below was sent to the
+buds, acked 00, and read back with the GET naming the new state:
+
+    01 off       SET 01 01 01 -> GET 01 01 08 00
+    02 anc       SET 01 01 02 -> GET 01 01 10 00
+    04 ambient   SET 01 01 04 -> GET 01 01 00 01
+
+The GET names child bitmap positions (off bit 3, ANC deep bit 4, transparency
+bit 8), while the SETs above use the parent positions; both were seen to stick
+on this hardware, and only these three SETs are ever sent. Other bitmap values
+the brand's own app knows (other NC levels, adaptive) are not sent and not
+read: this headset never answered one here.
+"""
+import ctypes
+import json
+import os
+import re
+import signal
+import struct
+import sys
+
+try:
+    import dbus
+    import dbus.mainloop.glib
+    import dbus.service
+    from gi.repository import GLib
+except ImportError as error:
+    sys.stdout.write(json.dumps({
+        "modes": False,
+        "error": "missing python dependency %s"
+                 % (getattr(error, "name", None) or error),
+    }) + "\n")
+    sys.stdout.flush()
+    sys.exit(4)
+
+try:
+    from gi.repository import GLibUnix
+    unix_signal_add = GLibUnix.signal_add
+except ImportError:
+    unix_signal_add = GLib.unix_signal_add
+
+# HeyMelody SPP. This is the UUID the widget picks the backend from, and the
+# channel BlueZ connects for us.
+UUID = "0000079a-d102-11e1-9b23-00025b00a5a5"
+PROFILE_PATH = "/io/github/ncr/omaphones/oppo"
+
+QUERY_ANC, RET_ANC, SET_ANC, ACK_ANC = 0x010C, 0x810C, 0x0404, 0x8404
+QUERY_BATTERY, RET_BATTERY = 0x0106, 0x8106
+
+ANC_QUERY_PAYLOAD = bytes([0x01, 0x01])
+
+# The three GET windows this headset answered, and the name the panel uses.
+# Anything else leaves the mode where it was, so no button pretends to be
+# selected for a state never seen here.
+MODE_FROM_PAIR = {(0x08, 0x00): "off", (0x10, 0x00): "anc", (0x00, 0x01): "ambient"}
+# The three SETs that were sent and read back above.
+BYTE_FROM_MODE = {"off": bytes([0x01, 0x01, 0x01]),
+                  "anc": bytes([0x01, 0x01, 0x02]),
+                  "ambient": bytes([0x01, 0x01, 0x04])}
+AVAILABLE = ["off", "anc", "ambient"]
+
+ADDRESS = re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
+
+USAGE = "usage: oppo-bridge <classic-address>"
+
+EXIT_TRANSIENT = 1
+EXIT_UNSUPPORTED = 3
+EXIT_SETUP = 4
+
+REPLY_TIMEOUT = 5
+CONNECT_TIMEOUT = 30
+CONNECT_DELAY = 500
+CONNECT_RETRY = 1500
+CONNECT_ATTEMPTS = 10
+GET_TIMEOUT = 3000
+# Touch-control changes arrive as nothing observed here (the channel stays
+# silent unless asked), so a light GET is how the panel follows a press on the
+# bud. Three seconds is slower than a person tapping and cheap on RFCOMM.
+POLL_INTERVAL = 3000
+# The battery changes slower than the mode; asking every tenth poll (half a
+# minute) keeps the fallback fresh without chattering.
+BATTERY_EVERY_N_POLLS = 10
+
+
+def emit(payload):
+    try:
+        sys.stdout.write(json.dumps(payload, separators=(",", ":")) + "\n")
+        sys.stdout.flush()
+    except (BrokenPipeError, ValueError):
+        os._exit(0)
+
+
+def arm_parent_death_signal():
+    try:
+        libc = ctypes.CDLL("libc.so.6", use_errno=True)
+        libc.prctl(1, signal.SIGTERM)
+    except Exception:
+        return
+    if os.getppid() == 1:
+        os._exit(0)
+
+
+def encode_varint(value):
+    out = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        if value:
+            out.append(byte | 0x80)
+        else:
+            out.append(byte)
+            return bytes(out)
+
+
+def build_frame(command, seq, payload=b""):
+    inner = struct.pack("<H", command) + bytes([seq & 0xFF]) \
+        + struct.pack("<H", len(payload)) + bytes(payload)
+    return b"\xAA" + encode_varint(2 + len(inner)) + b"\x00\x00" + inner
+
+
+def take_frames(buffer):
+    """Whole OPOv1 frames from a byte buffer: (cmd, seq, payload) each."""
+    data = bytes(buffer)
+    frames = []
+    index = 0
+    while index < len(data):
+        if data[index] != 0xAA:
+            index += 1
+            continue
+        value = 0
+        shift = 0
+        pos = index + 1
+        while pos < len(data):
+            byte = data[pos]
+            value |= (byte & 0x7F) << shift
+            shift += 7
+            pos += 1
+            if not (byte & 0x80):
+                break
+        else:
+            break
+        if pos + 2 > len(data):
+            break
+        if data[pos] != 0 or data[pos + 1] != 0:
+            index += 1
+            continue
+        if pos + 2 + 5 > len(data):
+            break
+        command = data[pos + 2] | (data[pos + 3] << 8)
+        seq = data[pos + 4]
+        paylen = data[pos + 5] | (data[pos + 6] << 8)
+        end = pos + 2 + 5 + paylen
+        if end > len(data):
+            break
+        frames.append((command, seq, data[pos + 7:end]))
+        index = end
+    return frames, bytearray(data[index:])
+
+
+def anc_mode_of(payload):
+    """The panel name for an 0x810C payload, or "" for one never seen here."""
+    data = bytes(payload)
+    for i in range(len(data) - 3):
+        if data[i] == 0x01 and data[i + 1] == 0x01:
+            pair = (data[i + 2], data[i + 3] if i + 3 < len(data) else 0)
+            mode = MODE_FROM_PAIR.get(pair)
+            if mode is not None:
+                return mode
+            return ""
+    return ""
+
+
+def battery_of(payload):
+    """(levels, charging) for an 0x8106 payload, or (None, None) if unusable."""
+    data = bytes(payload)
+    if len(data) < 2:
+        return None, None
+    count = data[1]
+    pairs = data[2:2 + count * 2]
+    if len(pairs) < count * 2:
+        return None, None
+    levels = {}
+    charging = []
+    names = {1: "left", 2: "right", 3: "case"}
+    for i in range(count):
+        index = pairs[i * 2]
+        value = pairs[i * 2 + 1]
+        name = names.get(index)
+        if name is None:
+            continue
+        levels[name] = value & 0x7F
+        if value & 0x80:
+            charging.append(name)
+    if not levels:
+        return None, None
+    for name, level in levels.items():
+        if level < 0 or level > 100:
+            return None, None
+    return levels, charging
+
+
+def find_device_path(bus, address):
+    wanted = address.upper()
+    objects = dbus.Interface(bus.get_object("org.bluez", "/"),
+                             "org.freedesktop.DBus.ObjectManager").GetManagedObjects()
+    for path, interfaces in objects.items():
+        device = interfaces.get("org.bluez.Device1")
+        if device and str(device.get("Address", "")).upper() == wanted:
+            return str(path)
+    return None
+
+
+class Bridge:
+    def __init__(self, bus, address, loop):
+        self.bus = bus
+        self.address = address
+        self.loop = loop
+        self.exit_code = None
+        self.device = None
+        self.manager = None
+        self.registered = False
+
+        self.fd = None
+        self.watch = None
+        self.buffer = bytearray()
+
+        self.seq = 0x01
+        self.mode_seen = False
+        self.mode = ""
+        self.levels = {}
+        self.charging = []
+        self.last_line = None
+        self.poll = None
+        self.poll_count = 0
+
+        self.pending = ""
+
+    def finish(self, code, message=None):
+        if self.exit_code is not None:
+            return False
+        self.exit_code = code
+        if message:
+            emit({"modes": False, "error": message})
+        self.loop.quit()
+        return False
+
+    def unregister(self):
+        if self.poll is not None:
+            try:
+                GLib.source_remove(self.poll)
+            except Exception:
+                pass
+            self.poll = None
+        if self.watch is not None:
+            try:
+                GLib.source_remove(self.watch)
+            except Exception:
+                pass
+            self.watch = None
+        if self.fd is not None:
+            try:
+                os.close(self.fd)
+            except OSError:
+                pass
+            self.fd = None
+        if self.manager is not None and self.registered:
+            try:
+                self.manager.UnregisterProfile(PROFILE_PATH, timeout=REPLY_TIMEOUT)
+            except dbus.DBusException:
+                pass
+            self.registered = False
+
+    def next_seq(self):
+        seq = self.seq
+        self.seq = 0x01 if self.seq >= 0xFE else self.seq + 1
+        return seq
+
+    def register(self):
+        try:
+            device_path = find_device_path(self.bus, self.address)
+        except dbus.DBusException as error:
+            return self.finish(EXIT_TRANSIENT,
+                               "cannot reach BlueZ: %s" % error.get_dbus_message())
+        if not device_path:
+            return self.finish(EXIT_TRANSIENT,
+                               "no paired device with address %s" % self.address)
+        self.device = dbus.Interface(
+            self.bus.get_object("org.bluez", device_path), "org.bluez.Device1")
+        self.manager = dbus.Interface(
+            self.bus.get_object("org.bluez", "/org/bluez"), "org.bluez.ProfileManager1")
+        try:
+            self.manager.RegisterProfile(PROFILE_PATH, UUID, {
+                "Name": "Omaphones Oppo",
+                "Role": "client",
+                "Channel": dbus.UInt16(0),
+                "RequireAuthentication": dbus.Boolean(False),
+                "RequireAuthorization": dbus.Boolean(False),
+                "AutoConnect": dbus.Boolean(False),
+            }, timeout=REPLY_TIMEOUT)
+        except dbus.DBusException as error:
+            return self.finish(EXIT_TRANSIENT,
+                               "cannot register the Oppo profile: %s"
+                               % error.get_dbus_message())
+        self.registered = True
+        GLib.timeout_add(CONNECT_DELAY, self.connect, 0)
+        return False
+
+    def connect(self, attempt):
+        if self.exit_code is not None or self.fd is not None:
+            return False
+
+        def failed(error):
+            if self.exit_code is not None or self.fd is not None:
+                return
+            if attempt + 1 < CONNECT_ATTEMPTS:
+                GLib.timeout_add(CONNECT_RETRY, self.connect, attempt + 1)
+                return
+            self.finish(EXIT_TRANSIENT, "cannot open the Oppo channel: %s"
+                        % error.get_dbus_message())
+
+        try:
+            self.device.ConnectProfile(UUID, reply_handler=lambda: None,
+                                       error_handler=failed, timeout=CONNECT_TIMEOUT)
+        except dbus.DBusException as error:
+            failed(error)
+        return False
+
+    def opened(self, fd):
+        if self.fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            return
+        self.fd = fd
+        self.watch = GLib.io_add_watch(fd, GLib.PRIORITY_DEFAULT,
+                                       GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR,
+                                       self.on_io)
+        self.ask_mode()
+        GLib.timeout_add(GET_TIMEOUT, self.on_get_timeout)
+
+    def write(self, payload):
+        if self.fd is None:
+            return
+        try:
+            written = 0
+            while written < len(payload):
+                written += os.write(self.fd, payload[written:])
+        except OSError as error:
+            self.finish(EXIT_TRANSIENT, "the Oppo channel closed: %s" % error)
+
+    def ask_mode(self):
+        if self.exit_code is not None or self.fd is None:
+            return False
+        self.write(build_frame(QUERY_ANC, self.next_seq(), ANC_QUERY_PAYLOAD))
+        return True
+
+    def ask_battery(self):
+        if self.exit_code is not None or self.fd is None:
+            return False
+        self.write(build_frame(QUERY_BATTERY, self.next_seq()))
+        return True
+
+    def on_get_timeout(self):
+        if self.exit_code is not None or self.mode_seen:
+            return False
+        return self.finish(EXIT_UNSUPPORTED,
+                           "the buds did not answer the listening-mode query")
+
+    def start_poll(self):
+        if self.poll is not None:
+            return
+        self.poll = GLib.timeout_add(POLL_INTERVAL, self.on_poll)
+
+    def on_poll(self):
+        if self.exit_code is not None or self.fd is None:
+            return False
+        self.poll_count += 1
+        if self.poll_count % BATTERY_EVERY_N_POLLS == 0:
+            self.ask_battery()
+        else:
+            self.ask_mode()
+        return True
+
+    def report(self):
+        line = {
+            "modes": True,
+            "mode": self.mode,
+            "available": AVAILABLE,
+        }
+        if self.levels:
+            battery = dict(self.levels)
+            battery["charging"] = list(self.charging)
+            line["battery"] = battery
+        if line != self.last_line:
+            self.last_line = line
+            emit(line)
+
+    def on_io(self, _fd, condition):
+        if condition & (GLib.IO_HUP | GLib.IO_ERR):
+            self.finish(EXIT_TRANSIENT, "the Oppo channel closed")
+            return False
+        try:
+            data = os.read(self.fd, 4096)
+        except OSError as error:
+            self.finish(EXIT_TRANSIENT, "the Oppo channel closed: %s" % error)
+            return False
+        if not data:
+            self.finish(EXIT_TRANSIENT, "the Oppo channel closed")
+            return False
+        self.buffer += data
+        frames, self.buffer = take_frames(self.buffer)
+        for command, seq, payload in frames:
+            self.on_frame(command, seq, payload)
+            if self.exit_code is not None:
+                return False
+        return True
+
+    def on_frame(self, command, seq, payload):
+        if command == RET_ANC:
+            self.on_mode(payload)
+        elif command == RET_BATTERY:
+            self.on_battery(payload)
+        elif command == ACK_ANC:
+            # The SET landed; the GET after it is what names the new state.
+            self.ask_mode()
+
+    def on_mode(self, payload):
+        mode = anc_mode_of(payload)
+        if not mode:
+            return
+        first = not self.mode_seen
+        self.mode_seen = True
+        self.mode = mode
+        self.report()
+        if first:
+            self.ask_battery()
+            self.start_poll()
+
+    def on_battery(self, payload):
+        levels, charging = battery_of(payload)
+        if levels is None:
+            return
+        self.levels = levels
+        self.charging = charging or []
+        if self.mode_seen:
+            self.report()
+
+    def command(self, line):
+        parts = line.strip().split()
+        if not parts or not self.mode_seen:
+            return
+        if parts[0] == "set" and len(parts) > 1:
+            payload = BYTE_FROM_MODE.get(parts[1])
+            if payload is None:
+                return
+            self.write(build_frame(SET_ANC, self.next_seq(), payload))
+
+    def on_stdin(self, _fd, condition):
+        if condition & (GLib.IO_HUP | GLib.IO_ERR):
+            self.finish(0)
+            return False
+        try:
+            chunk = os.read(0, 4096)
+        except OSError:
+            self.finish(0)
+            return False
+        if not chunk:
+            self.finish(0)
+            return False
+        self.pending += chunk.decode("utf-8", "replace")
+        while "\n" in self.pending:
+            line, self.pending = self.pending.split("\n", 1)
+            self.command(line)
+        return True
+
+    def listen_to_stdin(self):
+        GLib.io_add_watch(0, GLib.PRIORITY_DEFAULT,
+                          GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, self.on_stdin)
+
+
+def main():
+    argv = sys.argv[1:]
+    address = argv[0].strip() if argv else ""
+    if argv and argv[0] in ("-h", "--help"):
+        print(USAGE)
+        return 0
+    if not argv or not ADDRESS.match(address):
+        emit({"modes": False,
+              "error": "%s (not a Bluetooth address: %r)" % (USAGE, address)})
+        sys.exit(EXIT_SETUP)
+
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    try:
+        bus = dbus.SystemBus()
+    except dbus.DBusException as error:
+        emit({"modes": False, "error": "no system bus: %s" % error.get_dbus_message()})
+        sys.exit(EXIT_TRANSIENT)
+
+    loop = GLib.MainLoop()
+    bridge = Bridge(bus, address, loop)
+
+    class Profile(dbus.service.Object):
+        @dbus.service.method("org.bluez.Profile1", in_signature="", out_signature="")
+        def Release(self):
+            bridge.finish(EXIT_TRANSIENT, "BlueZ released the Oppo profile")
+
+        @dbus.service.method("org.bluez.Profile1", in_signature="oha{sv}",
+                             out_signature="")
+        def NewConnection(self, path, fd, properties):
+            bridge.opened(fd.take())
+
+        @dbus.service.method("org.bluez.Profile1", in_signature="o", out_signature="")
+        def RequestDisconnection(self, path):
+            bridge.finish(EXIT_TRANSIENT, "the Oppo channel closed")
+
+    Profile(bus, PROFILE_PATH)
+    bridge.listen_to_stdin()
+    bridge.register()
+
+    def stop(*_args):
+        bridge.finish(0)
+        return False
+
+    unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, stop)
+    unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, stop)
+
+    try:
+        if bridge.exit_code is None:
+            loop.run()
+    finally:
+        bridge.unregister()
+    sys.exit(bridge.exit_code or 0)
+
+
+if __name__ == "__main__":
+    arm_parent_death_signal()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except KeyboardInterrupt:
+        pass
+    except BaseException as error:
+        emit({"modes": False, "error": "%s: %s" % (type(error).__name__, error)})
+        sys.exit(EXIT_TRANSIENT)

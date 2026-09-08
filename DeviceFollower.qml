@@ -144,6 +144,10 @@ Item {
   //        xiaomi-bridge   Compact GAIA on standard SPP. The CSR GAIA UUID in
   //                        the SDP record is the claim; the socket is SPP. Same
   //                        lifecycle as Sony: Classic address, no Fast Pair.
+  //        oppo-bridge     HeyMelody on the vendor SPP UUID
+  //                        (0000079a-d102-…). The UUID in the SDP record is the
+  //                        claim; BlueZ connects the socket. Same lifecycle as
+  //                        Sony: Classic address, no Fast Pair.
   //        jbl-bridge      JBL's BLE GATT service, on the earbuds' BLE side at
   //                        an address that rotates and is announced only on the
   //                        Message Stream — so that path needs the reader, and
@@ -718,8 +722,8 @@ Item {
     onTriggered: follower.ancEnabled = true
   }
 
-  // The Classic-channel bridge — sony-bridge, nothing-bridge or xiaomi-bridge,
-  // whichever the backend names. Lives only while such a device is connected.
+  // The Classic-channel bridge — whichever the backend names. Lives only while
+  // such a device is connected.
   // Nothing else gates it: the channel is the device's own, so there is no BLE
   // address to wait for, no Fast Pair to depend on and no cache to consult —
   // the SDP UUID already said this device speaks the protocol. The one reason

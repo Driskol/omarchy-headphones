@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.ncr.omaphones",
   "name": "Omaphones",
-  "version": "1.2.2",
+  "version": "1.2.5",
   "author": "Jacek Becela",
   "license": "MIT",
   "description": "Battery levels and noise-cancellation control for Bluetooth headphones, in the Omarchy bar. JBL, Sony, Samsung, Nothing, Soundcore, Xiaomi; battery on anything with Google Fast Pair or BlueZ.",
@@ -59,7 +59,7 @@
         "type": "boolean",
         "label": "Read battery over Google Fast Pair",
         "defaultValue": true,
-        "description": "Left, right and case levels over the Fast Pair channel. Off: BlueZ's single figure only, and no JBL noise control — its BLE address is announced on this channel. Sony, Samsung, Nothing, Soundcore and Xiaomi are unaffected: they serve their own channels."
+        "description": "Left, right and case levels over the Fast Pair channel. Off: battery from a supported noise-control bridge while noise control is enabled, otherwise BlueZ's single figure if available. JBL noise control needs Fast Pair for its BLE address; bridges using the device's own channel work without Fast Pair."
       },
       {
         "key": "useModeControl",
