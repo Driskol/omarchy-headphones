@@ -169,6 +169,10 @@ open a pull request against `github.com/ncr/omarchy-headphones` with the result.
    canonical means a coverage example, not permission to reuse their bytes.
    Record a live test with device-reported results and restored settings;
    clearly list anything untested or not applicable. Preserve all existing pins.
+   These expanded requirements apply to new models and brands. Existing
+   supported models keep their current coverage; do not require historical
+   gaps to be filled. Changes to an existing model need tests for the changed
+   behaviour and its owner's confirmation, while preserving its existing pins.
 
    Two rules hold whatever brand this is, because nobody has more than their
    own headphones — the maintainer cannot test mine and I cannot test

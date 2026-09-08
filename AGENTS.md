@@ -47,6 +47,12 @@ use its own replies, never borrowed bytes. Keep original pins intact and label
 synthetic damage separately from observed protocol evidence. Other owners'
 pins remain equally binding. A capability not tested is documented as such.
 
+The expanded coverage requirement applies to new models and brands only.
+Existing supported models keep their current tests and evidence; owners do
+not have to fill historical gaps to remain supported. A change to an existing
+model must test the changed behaviour and be confirmed by its owner, without
+requiring a complete coverage retrofit. Existing pins remain binding.
+
 ## One command
 
 ```bash

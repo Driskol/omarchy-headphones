@@ -9,6 +9,12 @@ model that has never answered them.
 Canonical means evidence plus regression coverage, not that these headphones
 represent every brand. Other owners' existing pins remain equally binding.
 
+The expanded coverage requirement applies to new models and brands only.
+Existing supported models keep their current tests and evidence; owners do
+not have to fill historical gaps to remain supported. A change to an existing
+model must test the changed behaviour and be confirmed by its owner, without
+requiring a complete coverage retrofit. Existing pins remain binding.
+
 ## Read these together
 
 | Layer | Reference | What it proves |
@@ -20,7 +26,7 @@ represent every brand. Other owners' existing pins remain equally binding.
 | Bridge faults | `tests/canonical_bridges_test.py` | Fragmentation, checksum damage, queued commands and ACK timeout (Sony); malformed reports, discovery/subscription failures and timeout races (JBL) |
 | Battery and lifecycle | `tests/gfps_reader_test.py` | Real one-battery Sony and three-component JBL frames; partial/glued reads, last reading at hangup, reconnect state, refresh, device isolation and unfollow |
 | Shell decisions | `tests/model.test.js` | Both complete UUID lists select the correct backend and arguments; existing battery, routing and device-selection tests |
-| Live integration | `tools/check-live`, `docs/captures/canonical-live.json` | Owner-run IPC through QML and real bridges, all controls, battery, refresh/reconnect, peer isolation and restoration |
+| Live integration | `tools/check-live`, `docs/captures/canonical-live.json` | Owner-run IPC through QML and real bridges, all controls, battery snapshots, mode persistence across refresh, mode recovery after reconnect, peer isolation and restoration |
 
 The original `wh-ch720n.json` and `tune230nc-tws.json` pins are unchanged.
 The new pins supplement them. Replays select real frames into a deterministic
@@ -78,7 +84,10 @@ The captured battery samples are not charging samples. Charging/unknown tests
 are synthetic protocol inputs, not a claim of a physical charging test. The
 live checker reads the plugin's public state; it does not measure acoustic
 noise reduction, assess audio quality or inspect screenshots. It verifies
-recovery at the end of refresh/reconnect, not uninterrupted telemetry at every
-instant. Bluetooth radio timing, firmware variations, touch controls and
+mode persistence after a refresh request and mode recovery after reconnect,
+not fresh Fast Pair battery delivery or uninterrupted telemetry. In particular,
+Sony mode control uses a separate channel, so a successful mode check cannot
+prove that a Fast Pair refresh succeeded. The historical live report
+labels this check `refresh`; interpret it only as mode persistence. Bluetooth radio timing, firmware variations, touch controls and
 case-open/closed transitions still need owner testing. No percentage of code
 coverage is claimed.

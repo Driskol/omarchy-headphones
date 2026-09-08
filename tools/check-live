@@ -9,7 +9,8 @@ Run only with both pairs connected. Output stays outside the live plugin.
 
 This deliberately changes listening modes. --reconnect additionally cycles
 each Bluetooth connection (audio briefly stops). --refresh cycles only each
-Fast Pair channel. Neither operation runs as part of tools/check or CI.
+Fast Pair channel and checks mode persistence only, not fresh battery data.
+Neither operation runs as part of tools/check or CI.
 """
 import argparse
 import datetime
@@ -112,7 +113,8 @@ def main():
                 other_after = ipc("modeFor", other)
                 if other_after != other_before:
                     raise AssertionError(f"{operation} changed the other pair: {other_before} -> {other_after}")
-                report["checks"].append(dict(device=name, action=operation, reported=before))
+                report["checks"].append(dict(device=name, action=operation, reported=before,
+                                             verified="mode persistence" if operation == "refresh" else "mode recovery"))
                 print(name, operation, "ok", flush=True)
         report["passed"] = True
     except BaseException as error:

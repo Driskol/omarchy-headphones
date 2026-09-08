@@ -1402,6 +1402,7 @@ These are samples from that session, not fixed battery expectations on hardware.
 The new `*-canonical.json` pins replay selected frames while leaving the old
 pins unchanged. `tests/canonical_evidence_test.py` checks their mode bytes and
 the indexed battery frames against the captures. A separate successful live
-IPC run checked all controls, refresh, reconnect of each pair, peer state and
+IPC run checked all controls, battery snapshots, mode persistence after a
+refresh request, mode recovery after reconnect of each pair, peer state and
 restoration: [`canonical-live.json`](docs/captures/canonical-live.json).
 See [`docs/CANONICAL-TESTS.md`](docs/CANONICAL-TESTS.md) for coverage and limits.

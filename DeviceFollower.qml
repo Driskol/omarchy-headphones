@@ -128,7 +128,7 @@ Item {
   readonly property string modelId: String(reading.modelId || "")
   readonly property string bleAddress: String(reading.bleAddress || "")
 
-  // ---- Listening mode. Six brands, six protocols, one piece of state: the
+  // ---- Listening mode. Each brand has its protocol, one piece of state: the
   //      panel shows a mode and writes a mode, and which helper carries it is
   //      decided per device from the UUIDs in its SDP record.
   //
