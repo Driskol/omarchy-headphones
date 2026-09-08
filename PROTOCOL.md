@@ -1261,3 +1261,123 @@ and a noise-controls update (`0x77`) by its first byte. The plain status
 message (`0x60`) has not been captured from this headset and is not read — a
 capture of one is the next thing worth adding. The charging bits at offset 36
 of the extended status have only been seen as `0x40`, nothing charging.
+
+## OPPO Enco Air3 Pro — HeyMelody on RFCOMM
+
+Confirmed on an **OPPO Enco Air3 Pro** (`28:6F:40:D9:A5:A7`, modalias
+`bluetooth:v02B0p0000d001F`, Fast Pair model id `06c197`, HeyMelody product id
+`065C10`). It advertises the HeyMelody SPP UUID
+`0000079a-d102-11e1-9b23-00025b00a5a5` alongside standard SPP
+(`00001101-…`), the audio profiles and the Google Fast Pair Message Stream
+(`df21fe2c-…`). Fast Pair supplies per-earbud battery (left, right and case);
+HeyMelody supplies the listening mode and a second battery reading.
+
+The channel is opened through `org.bluez.Profile1` as a Classic client on the
+HeyMelody UUID — BlueZ does the SDP lookup and hands over the socket, the same
+arrangement as the Sony and Xiaomi bridges. No handshake is needed; the device
+answers queries at once. Sequence numbers increment `0x01`-`0xFE` and are
+echoed back; `0x00`/`0xFF` were never sent here.
+
+How it was found: the UUID is the one
+[OppoPods](https://github.com/Leaf-lsgtky/OppoPods) connects on, and its
+`Packets.kt` names the ANC query (`0x010C` with payload `01 01`) this headset
+answers. An earlier round guessed `0x0104` for the query and `0x0404` SETs
+against it — every SET acked `00` and no GET ever moved, which is what a wrong
+guess looks like on this protocol: an ACK and silence. The `0x010C` query
+below is what the hardware itself confirmed.
+
+### Frames
+
+```
+AA <len varint> 00 00 <cmd u16 LE> <seq u8> <paylen u16 LE> <payload>
+len = 7 + paylen (single-byte varint on every frame seen here)
+```
+
+Query answers echo the query's sequence number. A SET is acked (`0x8404`
+payload `00`) and the GET after it names the new state; nothing unsolicited
+followed any SET here, so the bridge polls the GET every 3 seconds the way
+the Xiaomi one does.
+
+### Product id
+
+```
+->  aa 07 00 00 03 01 01 00 00                QUERY 0x0103 empty
+<-  aa 0b 00 00 03 81 01 04 00 00 10 5c 06    RET: status 00, id 10 5c 06 LE
+```
+
+`105c06` reads as `065C10`, the whitelist id OppoPods lists for the Enco Air3
+Pro. Asked once while probing; the bridge does not send it.
+
+### Listening mode
+
+```
+->  aa 09 00 00 0c 01 02 02 00 01 01          QUERY 0x010C payload 01 01
+<-  aa 0c 00 00 0c 81 02 05 00 00 01 01 08 00 RET: window 01 01 08 00 -> off
+```
+
+The mode is the `01 01 [v1] [v2]` window in the reply. Each SET below was sent,
+acked `00`, and read back with the GET naming the new state:
+
+```
+SET 0x0404 01 01 01  ->  ACK 00  ->  GET 01 01 08 00  off
+SET 0x0404 01 01 02  ->  ACK 00  ->  GET 01 01 10 00  anc
+SET 0x0404 01 01 04  ->  ACK 00  ->  GET 01 01 00 01  ambient
+```
+
+Fully encoded (sequence numbers as sent):
+
+```
+aa 0a 00 00 04 04 21 03 00 01 01 02          SET anc
+aa 08 00 00 04 84 21 01 00 00                ACK
+aa 09 00 00 0c 01 22 02 00 01 01             GET
+aa 0c 00 00 0c 81 22 05 00 00 01 01 10 00    RET anc
+```
+
+`SET 01 01 08` (the child bitmap for off) was also sent and read back
+`08 00`; the bridge sends the parent `01 01 01` for symmetry with the other
+two. Nothing else is sent: the brand's other bitmap positions (other NC
+levels, adaptive) were never answered here and stay out, and a reply window
+outside the three above leaves the mode where it was.
+
+### Battery
+
+```
+->  aa 07 00 00 06 01 03 00 00                QUERY 0x0106 empty
+<-  aa 0d 00 00 06 81 03 06 00 00 02 01 50 02 50
+                                          RET: count 02, left 0x50, right 0x50
+```
+
+Index 1 is left, 2 is right, 3 the case; bit 7 of the value is charging, the
+low seven bits the percentage — the same encoding OppoPods parses. This answer
+carried only the two buds (left 80%, right 80%, neither charging); the case
+came over Fast Pair at the same moment. The bridge reports what the reply
+carries and the Fast Pair stream wins while it is up.
+
+### In the widget
+
+[`oppo-bridge`](oppo-bridge) holds the socket and writes the same lines the
+other bridges do, with the battery as a fallback like the Nothing one:
+
+```json
+{"modes": true, "mode": "anc", "available": ["off","anc","ambient"],
+ "battery": {"left": 70, "right": 80, "charging": []}}
+```
+
+Commands on stdin: `set off|anc|ambient`. Exit codes match the other bridges:
+0 clean, 1 transient, 3 silent (connected, but the `0x010C` query went
+unanswered), 4 setup. `tests/oppo_bridge_test.py` pins the query, the three
+SETs and the four answers above frame for frame.
+
+### The probe
+
+[`tools/oppo_probe.py`](tools/oppo_probe.py) — registers the HeyMelody UUID,
+sends the ANC and battery queries, prints every frame decoded with its
+`01 01` window, and optionally writes one SET first:
+
+```bash
+tools/oppo_probe.py 28:6F:40:D9:A5:A7
+tools/oppo_probe.py 28:6F:40:D9:A5:A7 20 set:anc
+```
+
+The widget's bridge holds the same profile, so turn `useModeControl` off
+before running it — a second client is refused while the first is up.

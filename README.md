@@ -1,6 +1,6 @@
 # Omaphones for Omarchy
 
-<p align="center"><b>JBL</b> &nbsp;·&nbsp; <b>Sony</b> &nbsp;·&nbsp; <b>Samsung</b> &nbsp;·&nbsp; <b>Nothing</b> &nbsp;·&nbsp; <b>Soundcore</b> &nbsp;·&nbsp; <b>Xiaomi</b></p>
+<p align="center"><b>JBL</b> &nbsp;·&nbsp; <b>Sony</b> &nbsp;·&nbsp; <b>Samsung</b> &nbsp;·&nbsp; <b>Nothing</b> &nbsp;·&nbsp; <b>Soundcore</b> &nbsp;·&nbsp; <b>Xiaomi</b> &nbsp;·&nbsp; <b>OPPO</b></p>
 
 <p align="center"><b>Battery levels and noise-cancellation control for Bluetooth headphones, in the Omarchy bar.</b></p>
 
@@ -71,11 +71,11 @@ Headphones not on the list? [Add yours](#add-your-own-headphones).
 <table>
 <tr>
 <td width="50%"><img src="docs/gallery/xiaomi-buds-5-pro.png" alt="Xiaomi Buds 5 Pro: one battery, Off / ANC / Ambient" width="100%"></td>
-<td width="50%"></td>
+<td width="50%"><img src="docs/gallery/oppo-enco-air3-pro.png" alt="OPPO Enco Air3 Pro: left, right and case, Off / ANC / Ambient" width="100%"></td>
 </tr>
 <tr>
 <td align="center">Xiaomi Buds 5 Pro — <a href="https://github.com/KentoNion">@KentoNion</a></td>
-<td align="center"></td>
+<td align="center">OPPO Enco Air3 Pro — <a href="https://github.com/Aryan447">@Aryan447</a></td>
 </tr>
 </table>
 
@@ -87,7 +87,7 @@ Headphones not on the list? [Add yours](#add-your-own-headphones).
   headphones, filling up as they charge. Readable from the bar without opening
   anything.
 - **Noise control** — Off / ANC / Ambient / TalkThru, from the panel or a key.
-  JBL, Sony, Samsung, Nothing, Soundcore and Xiaomi Buds 5 Pro today; built to learn
+  JBL, Sony, Samsung, Nothing, Soundcore, Xiaomi Buds 5 Pro and OPPO Enco Air3 Pro today; built to learn
   your brand. Sony and Soundcore add the ambient level with Focus on Voice or
   wind noise reduction; Nothing the ANC strength (Low / Mid / High / Adaptive)
   and a low-latency switch.
@@ -121,6 +121,7 @@ same idea, built for Apple's own protocol, and the plugin this one is modelled o
 | Samsung Galaxy Buds2 (earbuds) | <img src="docs/icons/yes.svg" width="14" alt="yes"> left, right, case | <img src="docs/icons/yes.svg" width="14" alt="yes"> Off · ANC · Ambient | [@seth-reee](https://github.com/seth-reee) |
 | Soundcore Space 2 (over-ear)| <img src="docs/icons/yes.svg" width="14" alt="yes"> one figure        | <img src="docs/icons/yes.svg" width="14" alt="yes"> Off · ANC · Ambient (level, wind noise reduction) | [@Sovego](https://github.com/Sovego) |
 | Xiaomi Buds 5 Pro (earbuds) | <img src="docs/icons/yes.svg" width="14" alt="yes"> one figure        | <img src="docs/icons/yes.svg" width="14" alt="yes"> Off · ANC · Ambient                          | [@KentoNion](https://github.com/KentoNion)|
+| OPPO Enco Air3 Pro (earbuds) | <img src="docs/icons/yes.svg" width="14" alt="yes"> left, right, case | <img src="docs/icons/yes.svg" width="14" alt="yes"> Off · ANC · Ambient | [@Aryan447](https://github.com/Aryan447) |
 | Nothing Ear (a) (earbuds)   | <img src="docs/icons/yes.svg" width="14" alt="yes"> left, right, case | <img src="docs/icons/yes.svg" width="14" alt="yes"> Off · ANC (Low / Mid / High / Adaptive) · Ambient · low latency | [@Jenesaispas69](https://github.com/Jenesaispas69) |
 | Nothing Ear · Headphone (1) | <img src="docs/icons/yes.svg" width="14" alt="yes"> expected (one figure on Headphone (1)) | <img src="docs/icons/yes.svg" width="14" alt="yes"> expected — same protocol, per [omarchy-nothing-ear](https://github.com/r-witz/omarchy-nothing-ear) | — |
 | soundcore Space One Pro (A3062, over-ear) | <img src="docs/icons/yes.svg" width="14" alt="yes"> one figure | <img src="docs/icons/yes.svg" width="14" alt="yes"> Off · ANC · Ambient (level, wind noise reduction) | [@sasiruLK](https://github.com/sasiruLK) |
@@ -286,6 +287,7 @@ and booleans), or the widget's entry in `~/.config/omarchy/shell.json`.
 - [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge) and [mos9527/SonyHeadphonesClient](https://github.com/mos9527/SonyHeadphonesClient) — the Sony frame format; the two disagree about the WH-CH720N, and the hardware settled it here.
 - [@f-iacono](https://github.com/f-iacono) — WH-1000XM6 protocol capture and wear-sensor support.
 - [r-witz/omarchy-nothing-ear](https://github.com/r-witz/omarchy-nothing-ear) — the Nothing protocol as a working Omarchy widget: battery components, the latency switch and the case cache; [DaanHessen/earctl](https://github.com/DaanHessen/earctl) — the command table; [@Jenesaispas69](https://github.com/Jenesaispas69)'s [PR #2](https://github.com/ncr/omarchy-headphones/pull/2) — the NT Link UUID and the frame layout from an Ear (a).
+- [Leaf-lsgtky/OppoPods](https://github.com/Leaf-lsgtky/OppoPods) — the HeyMelody ANC query (`0x010C`) and the `01 01` window this headset answers; [Swastik36/OPPO-Earbuds](https://github.com/Swastik36/OPPO-Earbuds) — the OPOv1 framing and the battery query.
 
 ## Licence
 

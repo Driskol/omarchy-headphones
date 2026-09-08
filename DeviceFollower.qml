@@ -144,6 +144,10 @@ Item {
   //        xiaomi-bridge   Compact GAIA on standard SPP. The CSR GAIA UUID in
   //                        the SDP record is the claim; the socket is SPP. Same
   //                        lifecycle as Sony: Classic address, no Fast Pair.
+  //        oppo-bridge     HeyMelody on the vendor SPP UUID
+  //                        (0000079a-d102-…). The UUID in the SDP record is the
+  //                        claim; BlueZ connects the socket. Same lifecycle as
+  //                        Sony: Classic address, no Fast Pair.
   //        jbl-bridge      JBL's BLE GATT service, on the earbuds' BLE side at
   //                        an address that rotates and is announced only on the
   //                        Message Stream — so that path needs the reader, and
@@ -154,7 +158,7 @@ Item {
   //      share one connection; this follower talks to it through its stdin, and
   //      the bridges report on the same contract into the same state.
   //
-  //      The three Classic-channel bridges take the same argument, report the
+  //      The Classic-channel bridges take the same argument, report the
   //      same lines and end the same four ways, so one Process runs whichever
   //      of them the backend names; only the JBL one, which dials a BLE address
   //      the reader announces, has a lifecycle of its own.
@@ -164,12 +168,14 @@ Item {
   readonly property string nothingBridgePath: service ? service.nothingBridgePath : ""
   readonly property string xiaomiBridgePath: service ? service.xiaomiBridgePath : ""
   readonly property string soundcoreBridgePath: service ? service.soundcoreBridgePath : ""
+  readonly property string oppoBridgePath: service ? service.oppoBridgePath : ""
   readonly property string classicBridgePath: {
     if (controlBackend === "sony") return sonyBridgePath
     if (controlBackend === "samsung") return samsungBridgePath
     if (controlBackend === "nothing") return nothingBridgePath
     if (controlBackend === "xiaomi") return xiaomiBridgePath
     if (controlBackend === "soundcore") return soundcoreBridgePath
+    if (controlBackend === "oppo") return oppoBridgePath
     return ""
   }
   property var ancState: ({})
@@ -727,8 +733,8 @@ Item {
     onTriggered: follower.ancEnabled = true
   }
 
-  // The Classic-channel bridge — sony-bridge, nothing-bridge or xiaomi-bridge,
-  // whichever the backend names. Lives only while such a device is connected.
+  // The Classic-channel bridge — whichever the backend names. Lives only while
+  // such a device is connected.
   // Nothing else gates it: the channel is the device's own, so there is no BLE
   // address to wait for, no Fast Pair to depend on and no cache to consult —
   // the SDP UUID already said this device speaks the protocol. The one reason

@@ -175,6 +175,7 @@ Item {
   readonly property string nothingBridgePath: Qt.resolvedUrl("nothing-bridge").toString().replace(/^file:\/\//, "")
   readonly property string xiaomiBridgePath: Qt.resolvedUrl("xiaomi-bridge").toString().replace(/^file:\/\//, "")
   readonly property string soundcoreBridgePath: Qt.resolvedUrl("soundcore-bridge").toString().replace(/^file:\/\//, "")
+  readonly property string oppoBridgePath: Qt.resolvedUrl("oppo-bridge").toString().replace(/^file:\/\//, "")
   // The devices the reader is asked to hold a channel open for. A follower for
   // a device that is not connected is kept so the widget can name what it is
   // waiting for, but it has nothing to open.
