@@ -1,0 +1,111 @@
+{
+  "model": "soundcore Space One Pro (A3062)",
+  "owner": "sasiruLK",
+  "bridge": "soundcore-bridge",
+  "notes": "Vendor UUID suffix b3062, PR #5. A 95-byte state payload with the six bytes at 69: off, level 5. The 0x31 padding puts a plausible-looking 0x01 at 71 \u2014 read there, this is \"ambient\".",
+  "session": {
+    "uuid": "0cf12d31-fac3-4553-bd80-d6832e7b3062"
+  },
+  "steps": [
+    {
+      "device": {
+        "cmd": "01 01",
+        "body": "31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 02 50 01 01 00 05 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31"
+      }
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "off",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 5,
+          "voice": false
+        }
+      ],
+      "note": "read at 69, then asked to confirm"
+    },
+    {
+      "sent": [
+        "08 ee 00 00 00 06 01 0a 00 07"
+      ]
+    },
+    {
+      "device": {
+        "cmd": "06 01",
+        "body": "02 50 01 01 00 05"
+      }
+    },
+    {
+      "line_count": 1,
+      "note": "same state, no repeat"
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "device": {
+        "cmd": "06 81"
+      },
+      "note": "a set is followed by an ACK only"
+    },
+    {
+      "line_count": 1
+    },
+    {
+      "timers": [
+        400
+      ],
+      "note": "the bridge asks 400 ms later, and the reply, not the optimism, is what reaches the panel"
+    },
+    {
+      "fire": true
+    },
+    {
+      "device": {
+        "cmd": "06 01",
+        "body": "01 50 01 01 00 05"
+      }
+    },
+    {
+      "sent": [
+        "08 ee 00 00 00 06 01 0a 00 07",
+        "08 ee 00 00 00 06 81 10 00 01 50 01 01 00 05 e5",
+        "08 ee 00 00 00 06 01 0a 00 07"
+      ]
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "off",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 5,
+          "voice": false
+        },
+        {
+          "modes": true,
+          "mode": "ambient",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 5,
+          "voice": false
+        }
+      ]
+    },
+    {
+      "exit": null
+    }
+  ]
+}

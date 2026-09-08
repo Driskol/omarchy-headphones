@@ -1,0 +1,112 @@
+{
+  "model": "Sony WH-1000XM4",
+  "owner": "seth-reee",
+  "bridge": "sony-bridge",
+  "notes": "0x02, MDR v1. PR #6. Nobody on the maintainer's desk has one: what is pinned is what PROTOCOL.md records the headset answering, and the frames the bridge builds from it.",
+  "session": {
+    "uuid": "v1",
+    "name": "WH-1000XM4"
+  },
+  "steps": [
+    {
+      "device": "01 00 70 00",
+      "note": "handshake: four bytes, so the v1 question comes first"
+    },
+    {
+      "sent": [
+        "66 02"
+      ]
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": "67 02 01 02 02 01 00 00",
+      "note": "RET: on, DUAL_SINGLE_OFF, nc=DUAL, asm normal, level 0"
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "anc",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 0,
+          "voice": false
+        }
+      ]
+    },
+    {
+      "state": {
+        "nc_value": 2
+      },
+      "note": "ncType came off the wire, not out of the default"
+    },
+    {
+      "command": "set off"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "level 5"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "voice on"
+    },
+    {
+      "ack": true
+    },
+    {
+      "sent": [
+        "66 02",
+        "68 02 00 02 00 01 00 00",
+        "68 02 01 02 01 01 00 00",
+        "68 02 01 02 02 01 00 00",
+        "68 02 01 02 01 01 00 05",
+        "68 02 01 02 02 01 01 00"
+      ],
+      "note": "as on v2: each SET carries what the headset last reported, so the level 5 is gone again by the voice switch, which goes out in the reported mode (anc)"
+    },
+    {
+      "line_count": 1
+    },
+    {
+      "device": "69 02 01 02 01 01 01 05"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "ambient",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ],
+        "level": 5,
+        "voice": true
+      }
+    },
+    {
+      "exit": null
+    }
+  ]
+}

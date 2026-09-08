@@ -1,0 +1,68 @@
+{
+  "model": "Samsung Galaxy Buds2",
+  "owner": "seth-reee",
+  "bridge": "samsung-bridge",
+  "notes": "SPPNew, PR #8. This headset answered one exact extended-status payload (0x61), and the bridge may keep sending only these exact frames.",
+  "session": {},
+  "steps": [
+    {
+      "call": "open",
+      "note": "the manager-info request, sent the moment the channel opens"
+    },
+    {
+      "sent": [
+        "fd 06 10 88 01 01 22 da 58 dd"
+      ]
+    },
+    {
+      "device": "fd 2a 00 61 0b 03 12 12 01 01 11 00 00 00 bf 22 01 00 40 01 40 01 03 00 03 66 00 02 00 10 00 00 00 00 11 02 00 01 00 00 40 00 00 99 3d dd",
+      "note": "the extended status the Buds2 answered with: ANC, 18% in both earbuds"
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "anc",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "battery": {
+            "left": 18,
+            "right": 18,
+            "case": 0,
+            "charging": []
+          }
+        }
+      ]
+    },
+    {
+      "command": "set off"
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "command": "set talkthru",
+      "note": "not a mode this model has: nothing goes out"
+    },
+    {
+      "sent": [
+        "fd 06 10 88 01 01 22 da 58 dd",
+        "fd 04 10 78 00 f0 81 dd",
+        "fd 04 10 78 01 d1 91 dd",
+        "fd 04 10 78 02 b2 a1 dd"
+      ]
+    },
+    {
+      "line_count": 1
+    },
+    {
+      "exit": null
+    }
+  ]
+}

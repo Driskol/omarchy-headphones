@@ -8,17 +8,11 @@ sending only those exact frames. The test below freezes the bytes the bridge
 writes on connect and on `set <mode>`, and it freezes the query answers the
 device itself gave.
 """
-import importlib.machinery
-import importlib.util
-import os
 import unittest
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-PATH = os.path.join(HERE, "..", "oppo-bridge")
-loader = importlib.machinery.SourceFileLoader("oppo_bridge", PATH)
-spec = importlib.util.spec_from_loader("oppo_bridge", loader)
-bridge_module = importlib.util.module_from_spec(spec)
-loader.exec_module(bridge_module)
+from tests import harness
+
+bridge_module = harness.load_bridge("oppo-bridge")
 
 ADDRESS = "28:6F:40:D9:A5:A7"
 
@@ -29,15 +23,24 @@ RET_AMBIENT = bytes.fromhex("aa0c00000c810205000001010001")
 RET_BATTERY = bytes.fromhex("aa0d00000681030600000201500250")
 
 
-class Session:
+class Session(harness.Session):
+    """Device and sent frames are whole HeyMelody frames, AA onwards.
+    The channel is already open; ask_mode starts the pinned exchange."""
+
     def __init__(self):
-        self.frames = []
-        self.lines = []
-        bridge_module.emit = self.lines.append
-        loop = type("Loop", (), {"quit": lambda self: None})()
-        self.bridge = bridge_module.Bridge(None, ADDRESS, loop)
+        super().__init__(bridge_module)
+        self.bridge = bridge_module.Bridge(None, ADDRESS, harness.FakeLoop())
         self.bridge.write = self.frames.append
         self.bridge.fd = 1
+
+    def device(self, spec):
+        self.bridge.buffer += harness.hexbytes(spec)
+        frames, self.bridge.buffer = bridge_module.take_frames(self.bridge.buffer)
+        for parsed in frames:
+            self.bridge.on_frame(*parsed)
+
+
+harness.pin_tests(globals(), "oppo-bridge", Session)
 
 
 def payload_of(frame):

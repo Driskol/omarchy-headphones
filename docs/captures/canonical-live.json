@@ -1,0 +1,150 @@
+{
+  "time": "2026-09-08T08:39:54.762660+00:00",
+  "devices": {
+    "sony": "88:92:CC:D1:B1:F2",
+    "jbl": "78:5E:A2:76:7F:20"
+  },
+  "initial": {
+    "sony": "anc",
+    "jbl": "anc"
+  },
+  "level": "14",
+  "voice": "off",
+  "checks": [
+    {
+      "device": "sony",
+      "action": "setModeFor",
+      "value": "off",
+      "reported": "off"
+    },
+    {
+      "device": "sony",
+      "action": "setModeFor",
+      "value": "anc",
+      "reported": "anc"
+    },
+    {
+      "device": "sony",
+      "action": "setModeFor",
+      "value": "ambient",
+      "reported": "ambient"
+    },
+    {
+      "device": "jbl",
+      "action": "setModeFor",
+      "value": "off",
+      "reported": "off"
+    },
+    {
+      "device": "jbl",
+      "action": "setModeFor",
+      "value": "anc",
+      "reported": "anc"
+    },
+    {
+      "device": "jbl",
+      "action": "setModeFor",
+      "value": "ambient",
+      "reported": "ambient"
+    },
+    {
+      "device": "jbl",
+      "action": "setModeFor",
+      "value": "talkthru",
+      "reported": "talkthru"
+    },
+    {
+      "device": "sony",
+      "action": "setAmbientLevelFor",
+      "value": 0,
+      "reported": "0"
+    },
+    {
+      "device": "sony",
+      "action": "setAmbientLevelFor",
+      "value": 5,
+      "reported": "5"
+    },
+    {
+      "device": "sony",
+      "action": "setAmbientLevelFor",
+      "value": 20,
+      "reported": "20"
+    },
+    {
+      "device": "sony",
+      "action": "setAmbientVoiceFor",
+      "value": "on",
+      "reported": "on"
+    },
+    {
+      "device": "sony",
+      "action": "setAmbientVoiceFor",
+      "value": "off",
+      "reported": "off"
+    },
+    {
+      "device": "sony",
+      "action": "batteryFor",
+      "reported": 39
+    },
+    {
+      "device": "sony",
+      "action": "refresh",
+      "reported": "ambient"
+    },
+    {
+      "device": "sony",
+      "action": "reconnect",
+      "reported": "ambient"
+    },
+    {
+      "device": "jbl",
+      "action": "leftFor",
+      "reported": 70
+    },
+    {
+      "device": "jbl",
+      "action": "rightFor",
+      "reported": 80
+    },
+    {
+      "device": "jbl",
+      "action": "batteryCaseFor",
+      "reported": 67
+    },
+    {
+      "device": "jbl",
+      "action": "refresh",
+      "reported": "talkthru"
+    },
+    {
+      "device": "jbl",
+      "action": "reconnect",
+      "reported": "talkthru"
+    }
+  ],
+  "restoration": [
+    {
+      "action": "setAmbientLevelFor",
+      "address": "88:92:CC:D1:B1:F2",
+      "ok": true
+    },
+    {
+      "action": "setAmbientVoiceFor",
+      "address": "88:92:CC:D1:B1:F2",
+      "ok": true
+    },
+    {
+      "action": "setModeFor",
+      "address": "88:92:CC:D1:B1:F2",
+      "ok": true
+    },
+    {
+      "action": "setModeFor",
+      "address": "78:5E:A2:76:7F:20",
+      "ok": true
+    }
+  ],
+  "passed": true
+}

@@ -1,0 +1,122 @@
+{
+  "model": "Soundcore Space 2",
+  "owner": "Sovego",
+  "bridge": "soundcore-bridge",
+  "notes": "Vendor UUID suffix d1402, PR #3. The 103-byte state payload has the six sound-mode bytes at 71; everything else is 0x31, a plausible switch value, which is what makes a wrong offset read as a plausible mode.",
+  "session": {
+    "uuid": "0cf12d31-fac3-4553-bd80-d6832e7d1402"
+  },
+  "steps": [
+    {
+      "device": {
+        "cmd": "01 01",
+        "body": "31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 01 1f ff 00 00 03 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31 31"
+      },
+      "note": "the state the device answers the handshake with: ambient, level 3"
+    },
+    {
+      "sent": [],
+      "note": "the state is read in place; nothing is asked of the device"
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "ambient",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 3,
+          "voice": false
+        }
+      ]
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "device": {
+        "cmd": "06 81"
+      },
+      "note": "ACK"
+    },
+    {
+      "device": {
+        "cmd": "06 01",
+        "body": "00 1f ff 00 00 03"
+      },
+      "note": "its own notification"
+    },
+    {
+      "command": "level 5"
+    },
+    {
+      "command": "voice on"
+    },
+    {
+      "sent": [
+        "08 ee 00 00 00 06 81 10 00 00 1f ff 00 00 03 ae",
+        "08 ee 00 00 00 06 81 10 00 00 1f ff 00 00 05 b0",
+        "08 ee 00 00 00 06 81 10 00 00 1f ff 00 01 05 b1"
+      ],
+      "note": "the whole conversation, frame for frame"
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "ambient",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 3,
+          "voice": false
+        },
+        {
+          "modes": true,
+          "mode": "anc",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 3,
+          "voice": false
+        },
+        {
+          "modes": true,
+          "mode": "anc",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 5,
+          "voice": false
+        },
+        {
+          "modes": true,
+          "mode": "anc",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 5,
+          "voice": true
+        }
+      ]
+    },
+    {
+      "timers": [],
+      "note": "nothing was scheduled to go out later, either"
+    },
+    {
+      "exit": null
+    }
+  ]
+}

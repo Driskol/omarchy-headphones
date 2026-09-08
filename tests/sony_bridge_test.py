@@ -1,30 +1,22 @@
-"""Pins what sony-bridge sends each headset that has answered it.
+"""What sony-bridge sends each headset that has answered it.
 
-    python -m unittest tests/sony_bridge_test.py
+    python -m unittest tests.sony_bridge_test
 
-A case here is somebody's working headphones, and this is what keeps the next
-model from changing what theirs are sent. Every case scripts one session — the
-handshake reply, the RET that settles the inquired type, a few widget commands,
-a notification — and asserts the exact outbound payloads and stdout lines,
-frame for frame. A change that alters a pinned model's sequence has to alter its
-case here, in the open, and that is the moment to ask its owner.
+The frozen sessions — one per model, somebody's working headphones — are the
+pin files in tests/pins/sony/, played by the harness; a change to what a
+pinned model is sent has to change its file, in the open, and that is the
+moment to ask its owner. What is here is the rest: framing, and the rules
+that hold across models (the candidate order, who is asked the wear
+question, what a silent headset does).
 
 No hardware and no D-Bus: the bridge's only two effects on the world are
-`write()` and `emit()`, and both are captured. The payloads are laid out from
-PROTOCOL.md rather than recorded — they pin the frames the bridge sends, which
-is the point, not the parsing of one particular unit's bytes.
+`write()` and `emit()`, and both are captured.
 """
-import importlib.machinery
-import importlib.util
-import os
 import unittest
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-PATH = os.path.join(HERE, "..", "sony-bridge")
-loader = importlib.machinery.SourceFileLoader("sony_bridge", PATH)
-spec = importlib.util.spec_from_loader("sony_bridge", loader)
-bridge_module = importlib.util.module_from_spec(spec)
-loader.exec_module(bridge_module)
+from tests import harness
+
+bridge_module = harness.load_bridge("sony-bridge")
 
 GET = bridge_module.NCASM_GET
 SET = bridge_module.NCASM_SET
@@ -33,94 +25,54 @@ NTFY = bridge_module.NCASM_NTFY
 DATA_MDR = bridge_module.DATA_MDR
 ACK = bridge_module.ACK
 WEAR_GET = bridge_module.SYSTEM_GET_STATUS
-WEAR_RET = bridge_module.SYSTEM_RET_STATUS
-WEAR_NTFY = bridge_module.SYSTEM_NTFY_STATUS
 WEAR_TYPE = bridge_module.WEARING_STATUS_TYPE
 
 
-def device_frame(payload, seq=0):
-    """A frame from the headset, built the way the headset builds one."""
-    return bridge_module.encode(DATA_MDR, seq, bytes(payload))
+class Session(harness.Session):
+    """A Sony session. "device" in a pin is an MDR payload as hex, or {"wire": "hex"} for an exact captured frame. For a payload, the frame
+    around it (type 0x0C, seq 0, length, checksum, byte stuffing) is built the
+    way the headset builds one. "sent" is the payload of every 0x0C frame the
+    bridge wrote, as hex; the ACKs it sent for device frames are left out."""
 
-
-def ack_frame(seq=1):
-    return bridge_module.encode(ACK, seq)
-
-
-class FakeGLib:
-    """Records what the bridge schedules; the test decides when it fires."""
-
-    PRIORITY_DEFAULT = 0
-    IO_IN = IO_HUP = IO_ERR = 0
-
-    def __init__(self):
-        self.timers = []
-
-    def timeout_add(self, ms, fn, *args):
-        self.timers.append((ms, fn, args))
-        return len(self.timers)
-
-    def io_add_watch(self, *_args):
-        return 0
-
-
-class Session:
-    """One bridge with its effects captured: payloads out, lines out, timers."""
-
-    def __init__(self, uuid=None, name=""):
-        self.frames = []
-        self.lines = []
-        self.glib = FakeGLib()
-        bridge_module.emit = self.lines.append
-        bridge_module.GLib = self.glib
-        loop = type("Loop", (), {"quit": lambda self: None})()
+    def __init__(self, uuid="v2", name=""):
+        super().__init__(bridge_module)
+        uuid = {"v2": bridge_module.UUID_V2, "v1": bridge_module.UUID_V1}.get(uuid, uuid)
         self.bridge = bridge_module.Bridge(
-            None, "94:DB:56:D0:F0:F0", loop, uuid or bridge_module.UUID_V2, name)
+            None, "94:DB:56:D0:F0:F0", harness.FakeLoop(), uuid, name)
         self.bridge.write = self.frames.append
-        # A real link has an fd; only write() and the framer are exercised here,
-        # and write() is captured above.
+        # A real link has an fd; only write() and the framer are exercised
+        # here, and write() is captured above.
         self.bridge.fd = -1
 
     def receive(self, frame):
         self.bridge.buffer += frame
         self.bridge.parse_buffer()
 
-    def command(self, line):
-        self.bridge.command(line)
+    def device(self, spec):
+        if isinstance(spec, dict):
+            self.receive(harness.hexbytes(spec["wire"]))
+        else:
+            self.receive(bridge_module.encode(DATA_MDR, 0, harness.hexbytes(spec)))
 
     def ack(self):
         """What the headset sends after every command, freeing the queue."""
-        self.receive(ack_frame())
+        self.receive(bridge_module.encode(ACK, 1))
 
     @property
     def sent(self):
-        """The payloads the bridge sent, ACKs of device frames left out."""
         out = []
         for frame in self.frames:
             decoded = bridge_module.decode(frame)
             if decoded and decoded[0] == DATA_MDR:
-                out.append(list(decoded[2]))
+                out.append(harness.hexstr(decoded[2]))
         return out
 
-    @property
-    def acked(self):
-        """How many device frames the bridge acknowledged."""
-        return sum(1 for f in self.frames
-                   if (bridge_module.decode(f) or (None,))[0] == ACK)
 
-    @property
-    def timers(self):
-        return [ms for ms, _fn, _args in self.glib.timers]
-
-    def fire(self):
-        """Run every scheduled timer, in order, once."""
-        pending, self.glib.timers = self.glib.timers, []
-        for _ms, fn, args in pending:
-            fn(*args)
+harness.pin_tests(globals(), "sony-bridge", Session)
 
 
 class Framing(unittest.TestCase):
-    """encode/decode, pinned once so the sessions below can talk in payloads."""
+    """encode/decode, pinned once so the sessions can talk in payloads."""
 
     def test_round_trip(self):
         frame = bridge_module.encode(DATA_MDR, 0, bytes([GET, 0x17]))
@@ -135,139 +87,18 @@ class Framing(unittest.TestCase):
         self.assertEqual(bridge_module.decode(frame)[2][-1], 0x3C)
 
 
-class WhCh720n(unittest.TestCase):
-    """0x17, MDR v2 — ncr. Frozen: change this only with a CH720N in hand."""
-
-    HANDSHAKE = [0x01, 0x00, 0x03, 0x00, 0x10, 0x02, 0x00, 0x00]
-    # RET: changed, on, ambient, normal, level 20.
-    STATE = [RET, 0x17, 0x01, 0x01, 0x01, 0x00, 0x14]
-
-    def test_frozen_session(self):
-        s = Session(name="WH-CH720N")
-        s.receive(device_frame(self.HANDSHAKE))
-        # Eight bytes, so the v2 questions come first — and 0x17 is the first.
-        self.assertEqual(s.sent, [[GET, 0x17]])
-        self.assertEqual(s.lines, [])
-
-        s.ack()
-        s.receive(device_frame(self.STATE))
-        self.assertEqual(s.lines, [{"modes": True, "mode": "ambient",
-                                    "available": ["off", "anc", "ambient"],
-                                    "level": 20, "voice": False}])
-
-        # Off, ANC, back to ambient, a level, a voice switch. Every SET carries
-        # the mode, level and voice flag the headset last *reported* — nothing
-        # here is remembered optimistically, so the level 5 above is gone again
-        # by the time the voice switch is sent. The notification below is what
-        # moves the stored values.
-        for line in ("set off", "set anc", "set ambient", "level 5", "voice on"):
-            s.command(line)
-            s.ack()
-
-        self.assertEqual(s.sent, [
-            [GET, 0x17],
-            [SET, 0x17, 0x01, 0, 0, 0, 20],
-            [SET, 0x17, 0x01, 1, 0, 0, 20],
-            [SET, 0x17, 0x01, 1, 1, 0, 20],
-            [SET, 0x17, 0x01, 1, 1, 0, 5],
-            [SET, 0x17, 0x01, 1, 1, 1, 20],
-        ])
-        # Nothing was read back and nothing was reported: the headset's own
-        # notification is what the panel is shown.
-        self.assertEqual(len(s.lines), 1)
-
-        s.receive(device_frame([NTFY, 0x17, 0x01, 0x01, 0x01, 0x01, 0x05]))
-        self.assertEqual(s.lines[-1], {"modes": True, "mode": "ambient",
-                                       "available": ["off", "anc", "ambient"],
-                                       "level": 5, "voice": True})
-        self.assertIsNone(s.bridge.exit_code)
-
+class OneTypeAtATime(unittest.TestCase):
     def test_a_block_of_another_type_is_dropped_once_one_answered(self):
         s = Session(name="WH-CH720N")
-        s.receive(device_frame(self.HANDSHAKE))
+        s.device("01 00 03 00 10 02 00 00")
         s.ack()
-        s.receive(device_frame(self.STATE))
+        s.device("67 17 01 01 01 00 14")
         # A v1-numbered block on a headset that answered 0x17 is not a v1
         # headset; reading it as one would move the panel to a mode nobody
         # asked for.
-        s.receive(device_frame([NTFY, 0x02, 0x01, 0x02, 0x02, 0x01, 0x00, 0x00]))
+        s.device("69 02 01 02 02 01 00 00")
         self.assertEqual(len(s.lines), 1)
         self.assertEqual(s.bridge.inquired, 0x17)
-
-
-class Wh1000xm5(unittest.TestCase):
-    """0x17, MDR v2 — huynguyendinhquang, PR #4. Frozen."""
-
-    HANDSHAKE = [0x01, 0x00, 0x03, 0x00, 0x20, 0x16, 0x00, 0x00]
-    STATE = [RET, 0x17, 0x01, 0x01, 0x01, 0x00, 0x14]
-
-    def test_frozen_session(self):
-        s = Session(name="WH-1000XM5")
-        s.receive(device_frame(self.HANDSHAKE))
-        s.ack()
-        s.receive(device_frame(self.STATE))
-        s.command("set anc")
-        s.ack()
-        s.command("voice on")
-
-        # The voice switch goes out in the mode the headset last reported —
-        # ambient — rather than dragging it anywhere on its own.
-        self.assertEqual(s.sent, [
-            [GET, 0x17],
-            [SET, 0x17, 0x01, 1, 0, 0, 20],
-            [SET, 0x17, 0x01, 1, 1, 1, 20],
-        ])
-        self.assertEqual(s.lines[0]["mode"], "ambient")
-        self.assertIsNone(s.bridge.exit_code)
-
-
-class Wh1000xm4(unittest.TestCase):
-    """0x02, MDR v1 — seth-reee, PR #6. Frozen: change this with an XM4 in hand.
-
-    Nobody here has one. What is pinned is what PROTOCOL.md records the headset
-    answering, and the frames the bridge builds from it.
-    """
-
-    HANDSHAKE = [0x01, 0x00, 0x70, 0x00]
-    # RET: on, DUAL_SINGLE_OFF, nc=DUAL, asm normal, level 0.
-    STATE = [RET, 0x02, 0x01, 0x02, 0x02, 0x01, 0x00, 0x00]
-
-    def test_frozen_session(self):
-        s = Session(bridge_module.UUID_V1, name="WH-1000XM4")
-        s.receive(device_frame(self.HANDSHAKE))
-        # Four bytes, so the v1 question comes first.
-        self.assertEqual(s.sent, [[GET, 0x02]])
-
-        s.ack()
-        s.receive(device_frame(self.STATE))
-        self.assertEqual(s.lines, [{"modes": True, "mode": "anc",
-                                    "available": ["off", "anc", "ambient"],
-                                    "level": 0, "voice": False}])
-        # ncType came off the wire, not out of the default.
-        self.assertEqual(s.bridge.nc_value, 0x02)
-
-        for line in ("set off", "set ambient", "set anc", "level 5", "voice on"):
-            s.command(line)
-            s.ack()
-
-        # As on the v2 models: each SET carries what the headset last reported,
-        # so the level 5 is gone again by the voice switch, which goes out in
-        # the reported mode (anc).
-        self.assertEqual(s.sent, [
-            [GET, 0x02],
-            [SET, 0x02, 0, 0x02, 0, 0x01, 0, 0],
-            [SET, 0x02, 1, 0x02, 1, 0x01, 0, 0],
-            [SET, 0x02, 1, 0x02, 2, 0x01, 0, 0],
-            [SET, 0x02, 1, 0x02, 1, 0x01, 0, 5],
-            [SET, 0x02, 1, 0x02, 2, 0x01, 1, 0],
-        ])
-        self.assertEqual(len(s.lines), 1)
-
-        s.receive(device_frame([NTFY, 0x02, 0x01, 0x02, 0x01, 0x01, 0x01, 0x05]))
-        self.assertEqual(s.lines[-1], {"modes": True, "mode": "ambient",
-                                       "available": ["off", "anc", "ambient"],
-                                       "level": 5, "voice": True})
-        self.assertIsNone(s.bridge.exit_code)
 
     def test_a_short_block_is_not_read(self):
         # Sony's v1 table numbers an NC-only 0x01 and an ambient-only 0x03 that
@@ -298,15 +129,15 @@ class CandidateOrder(unittest.TestCase):
         from that alone which questions exist.
         """
         s = Session()
-        s.receive(device_frame([0x01, 0x00, 0x70, 0x00]))
-        self.assertEqual(s.sent, [[GET, 0x02]])
+        s.device("01 00 70 00")
+        self.assertEqual(s.sent, ["66 02"])
 
         s.ack()
         s.fire()                                   # 0x02 goes unanswered
         s.ack()
-        self.assertEqual(s.sent[-1], [GET, 0x17])
+        self.assertEqual(s.sent[-1], "66 17")
 
-        s.receive(device_frame([RET, 0x17, 0x01, 0x01, 0x01, 0x00, 0x14]))
+        s.device("67 17 01 01 01 00 14")
         self.assertEqual(s.bridge.inquired, 0x17)
         self.assertEqual(s.lines[-1]["mode"], "ambient")
         self.assertIsNone(s.bridge.exit_code)
@@ -316,73 +147,36 @@ class CandidateOrder(unittest.TestCase):
             self.assertIn(candidate, bridge_module.AVAILABLE)
 
 
-class Wh1000xm6(unittest.TestCase):
-    """MDR v2 on 0x17, mode changes volunteered on 0x19, and the wear sensor —
-    f-iacono, PR #7. The only pinned model that is asked f2 10."""
-
-    HANDSHAKE = [0x01, 0x00, 0x03, 0x00, 0x20, 0x16, 0x00, 0x00]
-    STATE = [RET, 0x17, 0x01, 0x01, 0x01, 0x00, 0x0F]
-
-    def test_mode_notifications_and_wear_edges(self):
-        s = Session(name="WH-1000XM6")
-        s.receive(device_frame(self.HANDSHAKE))
-        s.ack()
-        # The wearing-status GET is queued behind the NCASM probe.
-        self.assertEqual(s.sent, [[GET, 0x17], [WEAR_GET, WEAR_TYPE]])
-
-        s.receive(device_frame(self.STATE))
-        self.assertNotIn("worn", s.lines[-1])
-        s.ack()
-        s.receive(device_frame([WEAR_RET, WEAR_TYPE, 0x00]))
-        self.assertTrue(s.lines[-1]["worn"])
-
-        # Mode changes arrive on the wider 0x19 block even though the GET was
-        # answered on 0x17; the SET stays the 0x17 one.
-        s.receive(device_frame([NTFY, 0x19, 0x01, 0x01, 0x01, 0x00,
-                                0x0A, 0x00, 0x00]))
-        self.assertEqual(s.lines[-1]["mode"], "ambient")
-        self.assertEqual(s.lines[-1]["level"], 10)
-        self.assertTrue(s.lines[-1]["worn"])
-        s.command("set anc")
-        self.assertEqual(s.sent[-1], [SET, 0x17, 0x01, 1, 0, 0, 10])
-
-        s.receive(device_frame([WEAR_NTFY, WEAR_TYPE, 0x01, 0x01]))
-        self.assertFalse(s.lines[-1]["worn"])
-        s.receive(device_frame([WEAR_NTFY, WEAR_TYPE, 0x01, 0x00]))
-        self.assertTrue(s.lines[-1]["worn"])
-
-
 class WearQuestion(unittest.TestCase):
     """Who is asked f2 10: a model with no row, and nobody without a name."""
 
-    HANDSHAKE = Wh1000xm5.HANDSHAKE
+    HANDSHAKE = "01 00 03 00 20 16 00 00"
 
     def test_a_model_nobody_has_held_is_asked(self):
         s = Session(name="WF-1000XM5")
-        s.receive(device_frame(self.HANDSHAKE))
+        s.device(self.HANDSHAKE)
         s.ack()
-        self.assertEqual(s.sent, [[GET, 0x17], [WEAR_GET, WEAR_TYPE]])
+        self.assertEqual(s.sent, ["66 17", "f2 10"])
 
     def test_no_name_is_the_old_caller_and_gets_the_old_frames(self):
         s = Session()
-        s.receive(device_frame(self.HANDSHAKE))
+        s.device(self.HANDSHAKE)
         s.ack()
-        self.assertEqual(s.sent, [[GET, 0x17]])
+        self.assertEqual(s.sent, ["66 17"])
 
     def test_every_pinned_model_has_a_row(self):
-        for name in ("WH-CH720N", "WH-1000XM5", "WH-1000XM4", "WH-1000XM6"):
-            self.assertIn(name, bridge_module.MODELS)
+        for _path, pin in harness.pins_for("sony-bridge"):
+            self.assertIn(pin["session"]["name"], bridge_module.MODELS, pin["model"])
 
 
 class Silent(unittest.TestCase):
     def test_nothing_answers_and_the_address_is_parked(self):
         s = Session()
-        s.receive(device_frame([0x01, 0x00, 0x03, 0x00, 0x10, 0x02, 0x00, 0x00]))
+        s.device("01 00 03 00 10 02 00 00")
         for _ in bridge_module.CANDIDATES:
             s.ack()
             s.fire()
-        self.assertEqual(s.sent, [[GET, 0x17], [GET, 0x15], [GET, 0x22],
-                                  [GET, 0x02]])
+        self.assertEqual(s.sent, ["66 17", "66 15", "66 22", "66 02"])
         self.assertEqual(s.bridge.exit_code, bridge_module.EXIT_UNSUPPORTED)
 
 

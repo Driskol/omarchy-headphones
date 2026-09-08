@@ -1,0 +1,56 @@
+{
+  "model": "Sony WH-1000XM5",
+  "owner": "huynguyendinhquang",
+  "bridge": "sony-bridge",
+  "notes": "0x17, MDR v2. PR #4.",
+  "session": {
+    "uuid": "v2",
+    "name": "WH-1000XM5"
+  },
+  "steps": [
+    {
+      "device": "01 00 03 00 20 16 00 00"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": "67 17 01 01 01 00 14"
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "ack": true
+    },
+    {
+      "command": "voice on"
+    },
+    {
+      "sent": [
+        "66 17",
+        "68 17 01 01 00 00 14",
+        "68 17 01 01 01 01 14"
+      ],
+      "note": "the voice switch goes out in the mode the headset last reported \u2014 ambient \u2014 rather than dragging it anywhere on its own"
+    },
+    {
+      "lines": [
+        {
+          "modes": true,
+          "mode": "ambient",
+          "available": [
+            "off",
+            "anc",
+            "ambient"
+          ],
+          "level": 20,
+          "voice": false
+        }
+      ]
+    },
+    {
+      "exit": null
+    }
+  ]
+}

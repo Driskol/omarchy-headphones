@@ -1,0 +1,81 @@
+{
+  "model": "Sony WH-1000XM6",
+  "owner": "f-iacono",
+  "bridge": "sony-bridge",
+  "notes": "MDR v2 on 0x17, mode changes volunteered on 0x19, and the wear sensor. PR #7. The only pinned model that is asked f2 10.",
+  "session": {
+    "uuid": "v2",
+    "name": "WH-1000XM6"
+  },
+  "steps": [
+    {
+      "device": "01 00 03 00 20 16 00 00"
+    },
+    {
+      "ack": true
+    },
+    {
+      "sent": [
+        "66 17",
+        "f2 10"
+      ],
+      "note": "the wearing-status GET is queued behind the NCASM probe"
+    },
+    {
+      "device": "67 17 01 01 01 00 0f"
+    },
+    {
+      "line_without": [
+        "worn"
+      ]
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": "f3 10 00"
+    },
+    {
+      "line_has": {
+        "worn": true
+      }
+    },
+    {
+      "device": "69 19 01 01 01 00 0a 00 00",
+      "note": "mode changes arrive on the wider 0x19 block even though the GET was answered on 0x17"
+    },
+    {
+      "line_has": {
+        "mode": "ambient",
+        "level": 10,
+        "worn": true
+      }
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "sent_last": "68 17 01 01 00 00 0a",
+      "note": "the SET stays the 0x17 one"
+    },
+    {
+      "device": "f5 10 01 01"
+    },
+    {
+      "line_has": {
+        "worn": false
+      }
+    },
+    {
+      "device": "f5 10 01 00"
+    },
+    {
+      "line_has": {
+        "worn": true
+      }
+    },
+    {
+      "exit": null
+    }
+  ]
+}

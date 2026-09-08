@@ -1,0 +1,224 @@
+{
+  "model": "Sony WH-CH720N",
+  "owner": "ncr",
+  "bridge": "sony-bridge",
+  "capture": "docs/captures/sony-wh-ch720n.txt",
+  "notes": "Canonical owner replay: selected real full RX frames from 2026-09-08, including frame checksum. Ordering is a replay; ACKs supplied by the harness. Original pin is unchanged.",
+  "session": {
+    "name": "WH-CH720N",
+    "uuid": "v2"
+  },
+  "steps": [
+    {
+      "device": {
+        "wire": "3e 0c 00 00 00 00 08 01 00 03 00 10 02 00 00 2a 3c"
+      }
+    },
+    {
+      "sent": [
+        "66 17"
+      ]
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 01 00 00 00 07 67 17 01 01 00 00 0e a2 3c"
+      }
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "anc",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ],
+        "level": 14,
+        "voice": false
+      }
+    },
+    {
+      "command": "set off"
+    },
+    {
+      "sent_last": "68 17 01 00 00 00 0e"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 00 00 00 00 07 69 17 01 00 01 00 0e a3 3c"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "off",
+        "level": 14,
+        "voice": false
+      }
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "sent_last": "68 17 01 01 00 00 0e"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 01 00 00 00 07 69 17 01 01 00 00 0e a4 3c"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "anc",
+        "level": 14,
+        "voice": false
+      }
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "sent_last": "68 17 01 01 01 00 0e"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 00 00 00 00 07 69 17 01 01 01 00 0e a4 3c"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "ambient",
+        "level": 14,
+        "voice": false
+      }
+    },
+    {
+      "command": "level 0"
+    },
+    {
+      "sent_last": "68 17 01 01 01 00 00"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 01 00 00 00 07 69 17 01 01 01 00 00 97 3c"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "ambient",
+        "level": 0,
+        "voice": false
+      }
+    },
+    {
+      "command": "level 5"
+    },
+    {
+      "sent_last": "68 17 01 01 01 00 05"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 00 00 00 00 07 69 17 01 01 01 00 05 9b 3c"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "ambient",
+        "level": 5,
+        "voice": false
+      }
+    },
+    {
+      "command": "level 20"
+    },
+    {
+      "sent_last": "68 17 01 01 01 00 14"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 01 00 00 00 07 69 17 01 01 01 00 14 ab 3c"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "ambient",
+        "level": 20,
+        "voice": false
+      }
+    },
+    {
+      "command": "voice on"
+    },
+    {
+      "sent_last": "68 17 01 01 01 01 14"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 00 00 00 00 07 69 17 01 01 01 01 14 ab 3c"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "ambient",
+        "level": 20,
+        "voice": true
+      }
+    },
+    {
+      "command": "voice off"
+    },
+    {
+      "sent_last": "68 17 01 01 01 00 14"
+    },
+    {
+      "ack": true
+    },
+    {
+      "device": {
+        "wire": "3e 0c 01 00 00 00 07 69 17 01 01 01 00 14 ab 3c"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "ambient",
+        "level": 20,
+        "voice": false
+      }
+    },
+    {
+      "line_count": 9
+    },
+    {
+      "command": "set talkthru"
+    },
+    {
+      "line_count": 9
+    },
+    {
+      "exit": null
+    }
+  ]
+}

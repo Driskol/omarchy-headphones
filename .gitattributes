@@ -1,0 +1,2 @@
+# Preserve fixed-width diagnostic output exactly, including trailing padding.
+docs/captures/*.txt whitespace=-blank-at-eol

@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Check the owner's connected JBL TUNE230NC TWS and Sony WH-CH720N.
+
+Uses the running plugin's IPC, waits for device-reported state, checks the
+other pair stays unchanged and restores Sony's dial/voice and both modes.
+Run only with both pairs connected. Output stays outside the live plugin.
+
+    tools/check-live --sony ADDRESS --jbl ADDRESS --output /tmp/live.json
+
+This deliberately changes listening modes. --reconnect additionally cycles
+each Bluetooth connection (audio briefly stops). --refresh cycles only each
+Fast Pair channel and checks mode persistence only, not fresh battery data.
+Neither operation runs as part of tools/check or CI.
+"""
+import argparse
+import datetime
+import json
+from pathlib import Path
+import subprocess
+import time
+
+
+def ipc(*args):
+    return subprocess.check_output(["omarchy-shell", "omaphones", *map(str, args)],
+                                   text=True, timeout=8).strip()
+
+
+def await_value(method, address, expected, timeout=15):
+    deadline = time.monotonic() + timeout
+    while True:
+        actual = ipc(method, address)
+        if actual == str(expected):
+            return actual
+        if time.monotonic() >= deadline:
+            raise AssertionError(f"{method} {address}: expected {expected}, got {actual}")
+        time.sleep(.25)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--sony", required=True)
+    parser.add_argument("--jbl", required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--refresh", action="store_true")
+    parser.add_argument("--reconnect", action="store_true")
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parent.parent
+    live_plugins = Path.home() / ".config/omarchy/plugins"
+    if (root in args.output.resolve().parents or args.output.exists()
+            or live_plugins.resolve() in args.output.resolve().parents):
+        parser.error("choose a new output file outside this checkout")
+    if args.sony.upper() == args.jbl.upper():
+        parser.error("the two device addresses must be different")
+    devices = {"sony": args.sony, "jbl": args.jbl}
+    for name, label in (("sony", "WH-CH720N"), ("jbl", "JBL TUNE230NC TWS")):
+        if label not in ipc("statusFor", devices[name]):
+            parser.error(f"{name}: expected connected {label}")
+    initial = {name: ipc("modeFor", address) for name, address in devices.items()}
+    level, voice = ipc("ambientLevelFor", args.sony), ipc("ambientVoiceFor", args.sony)
+    if any(mode not in ("off", "anc", "ambient", "talkthru") for mode in initial.values()):
+        parser.error(f"wait for both bridges to report a mode: {initial}")
+    if not level.isdigit() or voice not in ("on", "off"):
+        parser.error("Sony ambient settings are not ready to save and restore")
+    report = {"time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "devices": devices, "initial": initial, "level": level, "voice": voice,
+              "checks": [], "restoration": []}
+
+    def check(name, setter, value, getter):
+        address = devices[name]
+        other = devices["jbl" if name == "sony" else "sony"]
+        before = ipc("modeFor", other)
+        response = ipc(setter, value, address)
+        if response != "ok":
+            raise AssertionError(f"{setter}: {response}")
+        actual = await_value(getter, address, value)
+        if ipc("modeFor", other) != before:
+            raise AssertionError("changing one device changed the other")
+        report["checks"].append(dict(device=name, action=setter, value=value, reported=actual))
+        print(name, setter, value, "ok", flush=True)
+
+    try:
+        for name in devices:
+            for mode in (["off", "anc", "ambient"] if name == "sony" else
+                         ["off", "anc", "ambient", "talkthru"]):
+                check(name, "setModeFor", mode, "modeFor")
+        for value in (0, 5, 20):
+            check("sony", "setAmbientLevelFor", value, "ambientLevelFor")
+        for value in ("on", "off"):
+            check("sony", "setAmbientVoiceFor", value, "ambientVoiceFor")
+        for name, address in devices.items():
+            for part in (["batteryFor"] if name == "sony" else ["leftFor", "rightFor", "batteryCaseFor"]):
+                value = int(ipc(part, address))
+                if not 0 <= value <= 100:
+                    raise AssertionError(f"{name} {part}: {value}")
+                report["checks"].append(dict(device=name, action=part, reported=value))
+            other = devices["jbl" if name == "sony" else "sony"]
+            for operation, enabled in (("refresh", args.refresh), ("reconnect", args.reconnect)):
+                if not enabled:
+                    continue
+                before, other_before = ipc("modeFor", address), ipc("modeFor", other)
+                if operation == "refresh":
+                    ipc("refreshFor", address)
+                    time.sleep(5)
+                else:
+                    try:
+                        subprocess.run(["bluetoothctl", "disconnect", address], check=True,
+                                       capture_output=True, timeout=15)
+                        time.sleep(2)
+                    finally:
+                        subprocess.run(["bluetoothctl", "connect", address], check=True,
+                                       capture_output=True, timeout=25)
+                await_value("modeFor", address, before, timeout=45)
+                other_after = ipc("modeFor", other)
+                if other_after != other_before:
+                    raise AssertionError(f"{operation} changed the other pair: {other_before} -> {other_after}")
+                report["checks"].append(dict(device=name, action=operation, reported=before,
+                                             verified="mode persistence" if operation == "refresh" else "mode recovery"))
+                print(name, operation, "ok", flush=True)
+        report["passed"] = True
+    except BaseException as error:
+        report["passed"] = False
+        report["error"] = str(error)
+        raise
+    finally:
+        # Each restoration is independent: a lost JBL must not prevent Sony
+        # from getting its dial, voice and mode back (or vice versa).
+        for setter, value, getter, address in (
+            ("setAmbientLevelFor", level, "ambientLevelFor", args.sony),
+            ("setAmbientVoiceFor", voice, "ambientVoiceFor", args.sony),
+            ("setModeFor", initial["sony"], "modeFor", args.sony),
+            ("setModeFor", initial["jbl"], "modeFor", args.jbl),
+        ):
+            try:
+                deadline = time.monotonic() + 45
+                while ipc(setter, value, address) != "ok":
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError("bridge not ready for restoration after 45 s")
+                    time.sleep(1)
+                await_value(getter, address, value)
+                report["restoration"].append(dict(action=setter, address=address, ok=True))
+            except Exception as error:
+                report["restoration"].append(dict(action=setter, address=address, ok=False, error=str(error)))
+                report["passed"] = False
+        args.output.write_text(json.dumps(report, indent=2) + "\n")
+        print("Result:", args.output, flush=True)
+    if not report["passed"]:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

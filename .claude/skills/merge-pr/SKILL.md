@@ -1,6 +1,6 @@
 ---
 name: merge-pr
-description: Review and land a contributor's pull request to Omaphones — fetch it into a worktree, check it against the model invariant (a new model must not change what a working model is sent), fix it on the PR branch if needed, report and wait for the go-ahead, then merge with --no-ff in the house style, bump the version, deploy locally, and thank the contributor. Use when the user says "merge PR N", "we have new PRs", "check the pull requests", or invokes /merge-pr [N].
+description: Review and land a contributor's pull request to Omaphones — fetch it into a worktree, run tools/check, check it against the model invariant (a new model must not change what a working model is sent), fix it on the PR branch if needed, report and wait for the go-ahead, then merge with --no-ff in the house style, bump the version, deploy locally, and thank the contributor. Use when the user says "merge PR N", "we have new PRs", "check the pull requests", or invokes /merge-pr [N].
 ---
 
 # Merge a pull request
@@ -22,10 +22,10 @@ and why "ship only what the headset was seen to answer" is a rule and not a
 preference.
 
 Two rules that are not up for discussion in any PR: nothing a working model
-is sent may change (check 1 below), and no `sudo`, `pacman`, `yay` or any
-other install command or outside dependency lands anywhere in the repo —
-not in README, not in a comment, not in an error message (checks 4 and 5).
-A PR that has them is fixed on its branch, not merged as-is.
+is sent may change (check 1 below), and no install command or outside
+dependency lands anywhere in the repo — not in README, not in a comment, not
+in an error message (checks 4 and 5). A PR that has them is fixed on its
+branch, not merged as-is.
 
 ## 1. Fetch into a worktree
 
@@ -39,45 +39,50 @@ Work in the worktree for everything until the merge itself.
 
 ## 2. Review
 
-Read the whole diff (`git diff main pr-N -- . ':!docs/gallery'`), then run:
+Read the whole diff (`git diff main pr-N -- . ':!docs/gallery'`), then run
+the one list everybody runs:
 
 ```bash
-python3 -m unittest discover -s tests -p '*_test.py'
-deno test --allow-read tests/model.test.js
-python3 -m py_compile <every bridge the PR touched>
-qmllint -I /usr/share/omarchy/shell DeviceFollower.qml Panel.qml   # Service.qml: typed IPC functions trip qmllint; ignore those lines
-omarchy plugin validate .
-grep -rn -i 'sudo\|pacman' --exclude-dir=.git .                    # must print nothing
+CHECK_BASE=main tools/check
 ```
 
-Then check, in this order:
+It runs the bridge tests and the pins, the Model.js tests, the pin-diff
+(a pin edited or removed since `main` is a failure, with the owner named),
+the install-command-word grep, the gallery/README agreement, qmllint and
+`omarchy plugin validate`. CI ran the same list on the PR already; the
+pin-owners workflow will have commented on the PR naming the owner of any
+pin the PR changed. AGENTS.md says what each check is for.
+
+Then check, in this order, what a script cannot:
 
 1. **The invariant** — a new model may not change what an existing one is
-   sent. `git diff main -- tests/` must show only added cases: an edited frame
-   in a pinned session (`tests/sony_bridge_test.py`,
-   `tests/soundcore_bridge_test.py`) is the PR changing somebody's working
-   headphones, and a PR that edits the pins to make its tests pass is the
-   usual way this shows up. A new question to a headset (a new GET, a new
-   query) belongs in a per-model row — `MODELS` in `soundcore-bridge` and
-   `sony-bridge`, keyed by something known before the first frame goes out
-   (vendor UUID suffix, reported name) — with the pinned models keeping their
-   old row and `UNKNOWN` getting the wider behaviour. Prefer a list of
-   known-safe models to gating on the new one.
+   sent. `tools/check` fails on an edited pin; what it cannot see is a new
+   question asked of every model. A new GET, a new query, belongs in a
+   per-model row — `MODELS` in `soundcore-bridge` and `sony-bridge`, keyed
+   by something known before the first frame goes out (vendor UUID suffix,
+   reported name) — with the pinned models keeping their old row and
+   `UNKNOWN` getting the wider behaviour. Prefer a list of known-safe models
+   to gating on the new one. A PR that edits somebody else's pin to make its
+   tests pass is the usual way this shows up.
 2. **No guessed bytes** — a variant from a vendor table the headset never
    answered stays out of the code and of PROTOCOL.md. Comments that contradict
    each other about what was observed ("never asked for" next to "asked once")
-   mean one of them was written before the hardware was; settle it.
-3. **A pinned session for the new model**, asserting exact frames, in the
-   bridge's test file, and a row in the README table plus a Gallery cell with a
-   screenshot (`gallery-screenshot` skill).
+   mean one of them was written before the hardware was; settle it. A capture
+   under `docs/captures/` is the evidence; a pin that names one has it.
+3. **A pin for the new model** — `tests/pins/<brand>/<model>.json`, owner
+   named, asserting exact frames — and a row in the README table plus a
+   Gallery cell with a screenshot (`gallery-screenshot` skill). A new bridge
+   comes with its test file on `tests/harness.py` and its row in `BACKENDS`
+   in `Model.js`.
 4. **No new outside dependency** when the shell already has the thing:
    Quickshell services (`Quickshell.Services.Mpris`, `.Bluetooth`,
    `.Notifications`) over shelling out to a binary Omarchy does not install.
    Omarchy ships `python-gobject`, `python-dbus`, `bluez-utils`; nothing else
    may be assumed.
-5. **Marketplace strings** — the listing's scanner greps literal `sudo` and
-   `pacman` anywhere in the repo, README and comments included, and a hit
-   forces manual review. Install instructions do not go in.
+5. **Marketplace strings** — the listing's scanner greps the repository for
+   the literal names of the two package-install commands and the AUR helper,
+   README and comments included, and a hit forces manual review.
+   `tools/check` greps for the same words. Install instructions do not go in.
 6. **Behaviour for everyone** — a change that applies to every device or every
    user (a new default-on setting, a new action on disconnect) is not covered
    by the invariant; name it in the report so the user decides.
@@ -87,7 +92,7 @@ Then check, in this order:
 Make the changes in the worktree and commit them on `pr-N` as one commit,
 subject `Review: <what changed>`, body in the house style below, ending with
 the `Co-Authored-By` and `Claude-Session` trailers. Do not rewrite the
-contributor's commit. Rerun everything in step 2.
+contributor's commit. Rerun `tools/check`.
 
 ## 4. Report and wait
 

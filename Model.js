@@ -464,45 +464,115 @@ function uuidsFromBluetoothctl(text) {
   return out
 }
 
-// "sony", "samsung", "nothing", "xiaomi", "soundcore", "oppo", "jbl" or "" — the
-// backend to run
-// for this device, and the empty string for a device no path can reach. SDP
-// UUIDs win because they come from the device's own record: Sony first, then
-// Samsung's SPPNew UUID, then Nothing, then CSR GAIA (Xiaomi / QCC on SPP),
-// then Soundcore's vendor channel, then HeyMelody (OPPO / OnePlus / Realme).
-// A known BLE address only says the Message
-// Stream is up, which every Fast Pair device does whether or not it answers a
-// mode query, so it is last.
+// ---- The brands, one row each.
+//
+// A row says how a device is recognised — the UUIDs in its SDP record, or a
+// prefix of one; for JBL a BLE address the Fast Pair stream announced — which
+// bridge is run for it, what that bridge takes on its command line, and what
+// the panel's Ambient row looks like on it (the dial's range and the name of
+// the switch beside it; absent means the Sony shape, 0-20 and Focus on voice).
+//
+// Order matters. The first row whose claim the device's record carries wins,
+// and the BLE-address row comes last because every Fast Pair device has an
+// address whether or not it answers a mode query. Sony is first because its
+// UUID is the strongest statement a headset makes; a new brand goes where its
+// claim cannot take another brand's device — tests/model.test.js pins, for
+// every brand, that its own UUIDs still pick it.
+//
+// Adding a brand is adding a row here and the bridge file the row names; the
+// shell reads everything else off the row. tools/check reads the rows too:
+// each names a bridge that exists, with a test file and a pin.
+//
+// The argument names a row lists are filled by bridgeArgs() from what the
+// follower knows: "address" is the Classic address, "uuid" the Sony MDR
+// generation from sonyUuidFor(), "name" the name the headset reports (which
+// picks its row in the bridge's MODELS), "bleAddress" and "modelId" the two
+// things the Fast Pair stream announces. A bridge that gets one argument
+// today keeps getting one: the list is what the bridge was always sent.
+var BACKENDS = [
+  { name: "sony", bridge: "sony-bridge",
+    uuids: [SONY_MDR_V2_UUID, SONY_MDR_V1_UUID],
+    args: ["address", "uuid", "name"],
+    ambient: { min: 0, max: 20, voice: "Focus on voice" } },
+  { name: "samsung", bridge: "samsung-bridge",
+    uuids: [SAMSUNG_SPP_UUID], args: ["address"] },
+  { name: "nothing", bridge: "nothing-bridge",
+    uuids: [NOTHING_NT_LINK_UUID], args: ["address"] },
+  { name: "xiaomi", bridge: "xiaomi-bridge",
+    uuids: [CSR_GAIA_UUID], args: ["address"] },
+  { name: "soundcore", bridge: "soundcore-bridge",
+    uuidPrefix: SOUNDCORE_UUID_PREFIX, args: ["address"],
+    ambient: { min: 1, max: 5, voice: "Wind noise reduction" } },
+  { name: "oppo", bridge: "oppo-bridge",
+    uuids: [OPPO_HEYMELODY_UUID], args: ["address"] },
+  { name: "jbl", bridge: "jbl-bridge",
+    ble: true, args: ["bleAddress", "modelId"] }
+]
+
+var AMBIENT_DEFAULT = { min: 0, max: 20, voice: "Focus on voice" }
+
+function backendRow(name) {
+  for (var i = 0; i < BACKENDS.length; i++)
+    if (BACKENDS[i].name === str(name)) return BACKENDS[i]
+  return null
+}
+
+function rowClaims(row, id) {
+  if (row.uuids && row.uuids.indexOf(id) !== -1) return true
+  return !!row.uuidPrefix && id.indexOf(row.uuidPrefix) === 0
+}
+
+// The backend to run for this device — a row's name — or "" for a device no
+// path can reach. SDP UUIDs win because they come from the device's own
+// record; a known BLE address only says the Message Stream is up.
 function controlBackend(uuids, bleAddress) {
   var list = uuids || []
-  var samsung = false
-  var nothing = false
-  var gaia = false
-  var soundcore = false
-  var oppo = false
-  for (var i = 0; i < list.length; i++) {
-    var id = str(list[i]).trim().toLowerCase()
-    if (id === SONY_MDR_V2_UUID || id === SONY_MDR_V1_UUID) return "sony"
-    if (id === SAMSUNG_SPP_UUID) samsung = true
-    if (id === NOTHING_NT_LINK_UUID) nothing = true
-    if (id === CSR_GAIA_UUID) gaia = true
-    if (id.indexOf(SOUNDCORE_UUID_PREFIX) === 0) soundcore = true
-    if (id === OPPO_HEYMELODY_UUID) oppo = true
+  var ids = []
+  for (var i = 0; i < list.length; i++) ids.push(str(list[i]).trim().toLowerCase())
+  for (var r = 0; r < BACKENDS.length; r++) {
+    var row = BACKENDS[r]
+    if (row.ble) {
+      if (str(bleAddress).trim() !== "") return row.name
+      continue
+    }
+    for (var j = 0; j < ids.length; j++)
+      if (rowClaims(row, ids[j])) return row.name
   }
-  if (samsung) return "samsung"
-  if (nothing) return "nothing"
-  if (gaia) return "xiaomi"
-  if (soundcore) return "soundcore"
-  if (oppo) return "oppo"
-  return str(bleAddress).trim() !== "" ? "jbl" : ""
+  return ""
 }
 
 // The backends whose bridge takes the Classic address and serves the device's
 // own channel — everything but JBL, whose bridge dials a BLE address.
-var CLASSIC_BACKENDS = ["sony", "samsung", "nothing", "xiaomi", "soundcore", "oppo"]
+var CLASSIC_BACKENDS = []
+for (var backendIndex = 0; backendIndex < BACKENDS.length; backendIndex++)
+  if (!BACKENDS[backendIndex].ble) CLASSIC_BACKENDS.push(BACKENDS[backendIndex].name)
 
 function isClassicBackend(backend) {
   return CLASSIC_BACKENDS.indexOf(str(backend)) !== -1
+}
+
+// The bridge file for a backend, relative to the plugin directory, or "".
+function bridgeFor(backend) {
+  var row = backendRow(backend)
+  return row ? row.bridge : ""
+}
+
+// The bridge's command-line arguments, in the row's order, from what the
+// follower knows. A name the follower has no value for goes out as "" — for
+// sony-bridge that is the nameless caller, which gets the old frames.
+function bridgeArgs(backend, values) {
+  var row = backendRow(backend)
+  if (!row) return []
+  var known = values || {}
+  var out = []
+  for (var i = 0; i < row.args.length; i++) out.push(str(known[row.args[i]]))
+  return out
+}
+
+// The Ambient dial's range and the switch's name on this backend.
+function ambientRange(backend) {
+  var row = backendRow(backend)
+  return row && row.ambient ? row.ambient : AMBIENT_DEFAULT
 }
 
 // Which Sony MDR UUID to hand the bridge, or "" for a device serving neither.

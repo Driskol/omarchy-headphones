@@ -1,0 +1,152 @@
+{
+  "model": "OPPO Enco Air3 Pro",
+  "owner": "Aryan447",
+  "bridge": "oppo-bridge",
+  "notes": "Migrated from the tests merged in PR #11 and PROTOCOL.md. Reply frames are the existing test fixtures; outgoing sequence numbers follow this replay. No raw probe capture was included in main.",
+  "session": {},
+  "steps": [
+    {
+      "call": "ask_mode"
+    },
+    {
+      "sent": [
+        "aa 09 00 00 0c 01 01 02 00 01 01"
+      ]
+    },
+    {
+      "device": "aa 0c 00 00 0c 81 02 05 00 00 01 01 08 00"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "off",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ]
+      }
+    },
+    {
+      "sent_last": "aa 07 00 00 06 01 02 00 00"
+    },
+    {
+      "device": "aa 0d 00 00 06 81 03 06 00 00 02 01 50 02 50"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "off",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ],
+        "battery": {
+          "left": 80,
+          "right": 80,
+          "charging": []
+        }
+      }
+    },
+    {
+      "command": "set off"
+    },
+    {
+      "sent_last": "aa 0a 00 00 04 04 03 03 00 01 01 01"
+    },
+    {
+      "device": "aa 0c 00 00 0c 81 02 05 00 00 01 01 08 00"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "off",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ],
+        "battery": {
+          "left": 80,
+          "right": 80,
+          "charging": []
+        }
+      }
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "sent_last": "aa 0a 00 00 04 04 04 03 00 01 01 02"
+    },
+    {
+      "device": "aa 0c 00 00 0c 81 02 05 00 00 01 01 10 00"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "anc",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ],
+        "battery": {
+          "left": 80,
+          "right": 80,
+          "charging": []
+        }
+      }
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "sent_last": "aa 0a 00 00 04 04 05 03 00 01 01 04"
+    },
+    {
+      "device": "aa 0c 00 00 0c 81 02 05 00 00 01 01 00 01"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "ambient",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ],
+        "battery": {
+          "left": 80,
+          "right": 80,
+          "charging": []
+        }
+      }
+    },
+    {
+      "command": "set talkthru"
+    },
+    {
+      "sent": [
+        "aa 09 00 00 0c 01 01 02 00 01 01",
+        "aa 07 00 00 06 01 02 00 00",
+        "aa 0a 00 00 04 04 03 03 00 01 01 01",
+        "aa 0a 00 00 04 04 04 03 00 01 01 02",
+        "aa 0a 00 00 04 04 05 03 00 01 01 04"
+      ]
+    },
+    {
+      "device": "aa 08 00 00 04 84 21 01 00 00"
+    },
+    {
+      "sent_last": "aa 09 00 00 0c 01 06 02 00 01 01"
+    },
+    {
+      "line_count": 4
+    },
+    {
+      "exit": null
+    }
+  ]
+}

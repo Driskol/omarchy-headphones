@@ -1,0 +1,78 @@
+Owner: ncr
+Model: JBL TUNE230NC TWS
+Date: 2026-09-08
+Source: btmon on hci1, application data in HCI packets.
+Source text SHA256: 38fe93675bddb60d4aa74a1186c513dc86fc455ddf71c4538ba7b636f73b947e
+Selected protocol packets only; unrelated radio traffic omitted, terminal colours removed.
+Packet numbers, timestamps and hex dumps below are retained from the source.
+The replay selects frames from this session; it is not a timing simulation.
+
+btgatt-client[1178630]: < ACL: Handle 2049 flags 0x00 dlen 17     #624 7.734116
+      ATT: Write Request (0x12) len 12
+        Handle: 0x0010
+          Data[10]:
+        aa 91 07 10 01 00 02 00 03 00                    ..........      
+> ACL: Handle 2049 flags 0x02 dlen 17                             #631 7.768161
+      ATT: Handle Value Notification (0x1b) len 12
+        Handle: 0x000c
+          Data[10]:
+        aa 91 07 12 01 00 02 00 03 00                    ..........      
+btgatt-client[1178630]: < ACL: Handle 2049 flags 0x00 dlen 17     #663 8.095690
+      ATT: Write Request (0x12) len 12
+        Handle: 0x0010
+          Data[10]:
+        aa 91 07 10 01 01 02 00 03 00                    ..........      
+> ACL: Handle 2049 flags 0x02 dlen 17                             #675 8.219156
+      ATT: Handle Value Notification (0x1b) len 12
+        Handle: 0x000c
+          Data[10]:
+        aa 91 07 12 01 01 02 00 03 00                    ..........      
+btgatt-client[1178630]: < ACL: Handle 2049 flags 0x00 dlen 17     #689 8.455000
+      ATT: Write Request (0x12) len 12
+        Handle: 0x0010
+          Data[10]:
+        aa 91 07 10 01 00 02 01 03 00                    ..........      
+> ACL: Handle 2049 flags 0x02 dlen 17                             #694 8.488171
+      ATT: Handle Value Notification (0x1b) len 12
+        Handle: 0x000c
+          Data[10]:
+        aa 91 07 12 01 00 02 01 03 00                    ..........      
+btgatt-client[1178630]: < ACL: Handle 2049 flags 0x00 dlen 17     #717 8.813964
+      ATT: Write Request (0x12) len 12
+        Handle: 0x0010
+          Data[10]:
+        aa 91 07 10 01 00 02 00 03 01                    ..........      
+> ACL: Handle 2049 flags 0x02 dlen 17                             #723 8.879168
+      ATT: Handle Value Notification (0x1b) len 12
+        Handle: 0x000c
+          Data[10]:
+        aa 91 07 12 01 00 02 00 03 01                    ..........      
+> ACL: Handle 512 flags 0x02 dlen 15                            #1640 22.838157
+      Channel: 64 len 11 [PSM 0 mode Basic (0x00)] {chan 65535}
+        89 ef 0f 03 01 00 03 71 f2 0a e8                 .......q...     
+> ACL: Handle 512 flags 0x02 dlen 18                            #1644 22.867160
+      Channel: 64 len 14 [PSM 0 mode Basic (0x00)] {chan 65535}
+        89 ef 15 03 02 00 06 64 3b e9 eb e3 0b e8        .......d;.....  
+> ACL: Handle 512 flags 0x02 dlen 15                            #1649 22.896158
+      Channel: 64 len 11 [PSM 0 mode Basic (0x00)] {chan 65535}
+        89 ef 0f 03 03 00 03 46 50 43 e8                 .......FPC.     
+btgatt-client[1180132]: < ACL: Handle 2049 flags 0x00 dlen 11   #2445 28.509418
+      ATT: Write Request (0x12) len 6
+        Handle: 0x0010
+          Data[4]:
+        aa 91 01 11                                      ....            
+> ACL: Handle 2049 flags 0x02 dlen 17                           #2451 28.588158
+      ATT: Handle Value Notification (0x1b) len 12
+        Handle: 0x000c
+          Data[10]:
+        aa 91 07 12 01 00 02 00 03 01                    ..........      
+btgatt-client[1181707]: < ACL: Handle 2049 flags 0x00 dlen 11   #4363 54.938454
+      ATT: Write Request (0x12) len 6
+        Handle: 0x0010
+          Data[4]:
+        aa 91 01 11                                      ....            
+> ACL: Handle 2049 flags 0x02 dlen 17                           #4379 55.018156
+      ATT: Handle Value Notification (0x1b) len 12
+        Handle: 0x000c
+          Data[10]:
+        aa 91 07 12 01 00 02 00 03 01                    ..........      
