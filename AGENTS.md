@@ -36,6 +36,17 @@ a pull request that breaks either is sent back:
    and name it from your pin (`"capture": ...`); a frame the bridge parses
    should be in there.
 
+## Canonical owner examples
+
+JBL TUNE230NC TWS and Sony WH-CH720N are the canonical reference models,
+prepared and hardware-tested by the maintainer @ncr on his own headphones.
+Read `docs/CANONICAL-TESTS.md` before adding support. Their `*-canonical.json`
+pins, packet evidence, bridge fault tests, Fast Pair tests and live check show
+the expected coverage. Match coverage for the capabilities your model has;
+use its own replies, never borrowed bytes. Keep original pins intact and label
+synthetic damage separately from observed protocol evidence. Other owners'
+pins remain equally binding. A capability not tested is documented as such.
+
 ## One command
 
 ```bash

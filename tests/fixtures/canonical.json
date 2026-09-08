@@ -1,0 +1,104 @@
+{
+  "sony": {
+    "model": "Sony WH-CH720N",
+    "slug": "sony-wh-ch720n",
+    "address": "88:92:CC:D1:B1:F2",
+    "rx": {
+      "handshake": {
+        "packet": 4098,
+        "hex": "3e 0c 00 00 00 00 08 01 00 03 00 10 02 00 00 2a 3c"
+      },
+      "initial": {
+        "packet": 4119,
+        "hex": "3e 0c 01 00 00 00 07 67 17 01 01 00 00 0e a2 3c"
+      },
+      "off": {
+        "packet": 467,
+        "hex": "3e 0c 00 00 00 00 07 69 17 01 00 01 00 0e a3 3c"
+      },
+      "anc": {
+        "packet": 522,
+        "hex": "3e 0c 01 00 00 00 07 69 17 01 01 00 00 0e a4 3c"
+      },
+      "ambient": {
+        "packet": 617,
+        "hex": "3e 0c 00 00 00 00 07 69 17 01 01 01 00 0e a4 3c"
+      },
+      "level0": {
+        "packet": 791,
+        "hex": "3e 0c 01 00 00 00 07 69 17 01 01 01 00 00 97 3c"
+      },
+      "level5": {
+        "packet": 842,
+        "hex": "3e 0c 00 00 00 00 07 69 17 01 01 01 00 05 9b 3c"
+      },
+      "level20": {
+        "packet": 897,
+        "hex": "3e 0c 01 00 00 00 07 69 17 01 01 01 00 14 ab 3c"
+      },
+      "voice_on": {
+        "packet": 966,
+        "hex": "3e 0c 00 00 00 00 07 69 17 01 01 01 01 14 ab 3c"
+      },
+      "voice_off": {
+        "packet": 1022,
+        "hex": "3e 0c 01 00 00 00 07 69 17 01 01 01 00 14 ab 3c"
+      }
+    },
+    "gfps": {
+      "model": {
+        "packet": 1089,
+        "hex": "03 01 00 03 f4 2f fc"
+      },
+      "ble": {
+        "packet": 1091,
+        "hex": "03 02 00 06 ca d0 19 9c 8c d3"
+      },
+      "battery": {
+        "packet": 1095,
+        "hex": "03 03 00 01 27"
+      }
+    },
+    "capture": "docs/captures/sony-wh-ch720n.txt",
+    "uuid_capture": "docs/captures/sony-wh-ch720n-bluetoothctl.txt"
+  },
+  "jbl": {
+    "model": "JBL TUNE230NC TWS",
+    "slug": "jbl-tune230nc-tws",
+    "address": "78:5E:A2:76:7F:20",
+    "rx": {
+      "off": {
+        "packet": 631,
+        "hex": "aa 91 07 12 01 00 02 00 03 00"
+      },
+      "anc": {
+        "packet": 675,
+        "hex": "aa 91 07 12 01 01 02 00 03 00"
+      },
+      "ambient": {
+        "packet": 694,
+        "hex": "aa 91 07 12 01 00 02 01 03 00"
+      },
+      "talkthru": {
+        "packet": 723,
+        "hex": "aa 91 07 12 01 00 02 00 03 01"
+      }
+    },
+    "gfps": {
+      "model": {
+        "packet": 1640,
+        "hex": "03 01 00 03 71 f2 0a"
+      },
+      "ble": {
+        "packet": 1644,
+        "hex": "03 02 00 06 64 3b e9 eb e3 0b"
+      },
+      "battery": {
+        "packet": 1649,
+        "hex": "03 03 00 03 46 50 43"
+      }
+    },
+    "capture": "docs/captures/jbl-tune230nc-tws.txt",
+    "uuid_capture": "docs/captures/jbl-tune230nc-tws-bluetoothctl.txt"
+  }
+}

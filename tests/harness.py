@@ -334,6 +334,8 @@ def pin_tests(namespace, bridge, session_factory):
 
         def test_frozen_session(self, pin=pin, path=path):
             session = session_factory(**pin.get("session", {}))
+            if hasattr(session, "close"):
+                self.addCleanup(session.close)
             run_pin(self, session, pin, path)
 
         name = "Pin_" + stem.replace("-", "_").replace(".", "_")

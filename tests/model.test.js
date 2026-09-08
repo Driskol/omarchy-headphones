@@ -950,3 +950,25 @@ Deno.test("controlBackend picks oppo from the HeyMelody UUID", () => {
   assertEquals(Model.controlBackend([Model.OPPO_HEYMELODY_UUID, Model.SOUNDCORE_UUID_PREFIX + "d1402"], ""), "soundcore");
   assertEquals(Model.isClassicBackend("oppo"), true);
 });
+
+// Canonical owner records: complete bluetoothctl output, not a guessed UUID list.
+const canonical = JSON.parse(await Deno.readTextFile(new URL('fixtures/canonical.json', import.meta.url)));
+Deno.test('canonical Sony and JBL SDP records select their own bridge', async () => {
+  for (const [brand, fixture] of Object.entries(canonical)) {
+    const record = await Deno.readTextFile(new URL('../' + fixture.uuid_capture, import.meta.url));
+    const ids = Model.uuidsFromBluetoothctl(record);
+    const expectedCount = brand === 'sony' ? 30 : 16;
+    assertEquals(ids.length, expectedCount, brand + ': complete captured UUID list');
+    const ble = fixture.gfps.ble.hex.split(' ').slice(4).join(':').toUpperCase();
+    assertEquals(Model.controlBackend(ids, ble), brand);
+    assertEquals(Model.controlBackend([...ids].reverse(), ble), brand);
+    assertEquals(Model.controlBackend(ids.map(id => id.toUpperCase()), ble), brand);
+    assertEquals(Model.controlBackend(ids, ''), brand === 'sony' ? 'sony' : '');
+    assertEquals(Model.bridgeArgs(brand, {
+      address: fixture.address, uuid: Model.SONY_MDR_V2_UUID, name: 'WH-CH720N',
+      bleAddress: ble, modelId: '71f20a',
+    }), brand === 'sony'
+      ? [fixture.address, Model.SONY_MDR_V2_UUID, 'WH-CH720N']
+      : [ble, '71f20a']);
+  }
+});

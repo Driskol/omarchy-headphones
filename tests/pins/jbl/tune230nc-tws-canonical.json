@@ -1,0 +1,106 @@
+{
+  "model": "JBL TUNE230NC TWS",
+  "owner": "ncr",
+  "bridge": "jbl-bridge",
+  "capture": "docs/captures/jbl-tune230nc-tws.txt",
+  "notes": "Canonical owner replay: HCI notification payloads recorded 2026-09-08, rendered in btgatt-client line format. All four mode answers, including TalkThru; original pin unchanged.",
+  "session": {},
+  "steps": [
+    {
+      "device": "Connecting to device... Done"
+    },
+    {
+      "device": "GATT discovery procedures complete"
+    },
+    {
+      "call": "start"
+    },
+    {
+      "wait_sent": 1
+    },
+    {
+      "device": "Registered notify handler"
+    },
+    {
+      "wait_sent": 3
+    },
+    {
+      "device": "Handle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 01 02 00 03 00"
+    },
+    {
+      "call": "wait_start"
+    },
+    {
+      "command": "set off"
+    },
+    {
+      "sent_last": "write-value 0x0010 0xaa 0x91 0x07 0x10 0x01 0x00 0x02 0x00 0x03 0x00"
+    },
+    {
+      "device": "Handle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 00 02 00 03 00"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "off"
+      }
+    },
+    {
+      "command": "set anc"
+    },
+    {
+      "sent_last": "write-value 0x0010 0xaa 0x91 0x07 0x10 0x01 0x01 0x02 0x00 0x03 0x00"
+    },
+    {
+      "device": "Handle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 01 02 00 03 00"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "anc"
+      }
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "sent_last": "write-value 0x0010 0xaa 0x91 0x07 0x10 0x01 0x00 0x02 0x01 0x03 0x00"
+    },
+    {
+      "device": "Handle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 00 02 01 03 00"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "ambient"
+      }
+    },
+    {
+      "command": "set talkthru"
+    },
+    {
+      "sent_last": "write-value 0x0010 0xaa 0x91 0x07 0x10 0x01 0x00 0x02 0x00 0x03 0x01"
+    },
+    {
+      "device": "Handle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 00 02 00 03 01"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "talkthru"
+      }
+    },
+    {
+      "line_count": 5
+    },
+    {
+      "device": "Handle Value Not/Ind: 0x000c - (10 data bytes): aa 91 07 12 01 00 02 00 03 01"
+    },
+    {
+      "line_count": 5
+    },
+    {
+      "exit": null
+    }
+  ]
+}

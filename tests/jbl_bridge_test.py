@@ -15,6 +15,7 @@ lines it tells the child, emit(), and the two support-file writes, and all
 of them are captured.
 """
 import queue
+import os
 import subprocess
 import threading
 import time
@@ -128,6 +129,14 @@ class Session(harness.Session):
             return self.start_code
         return super().state(name)
 
+    def close(self):
+        self.bridge.finish(0)
+        self.bridge.stop()
+        if self.thread is not None:
+            self.thread.join(2)
+        os.close(self.bridge.wake_read)
+        os.close(self.bridge.wake_write)
+
 
 harness.pin_tests(globals(), "jbl-bridge", Session)
 
@@ -140,6 +149,7 @@ class Silent(unittest.TestCase):
         bridge_module.ANSWER_TIMEOUT = 0.05
         try:
             s = Session()
+            self.addCleanup(s.close)
             s.device("Connecting to device... Done")
             s.device(DISCOVERED)
             s.do_start()
@@ -154,6 +164,7 @@ class Silent(unittest.TestCase):
 
     def test_a_refused_link_is_transient_and_records_nothing(self):
         s = Session()
+        self.addCleanup(s.close)
         s.device("Failed to connect: Connection refused (111)")
         self.assertEqual(s.bridge.exit_code, bridge_module.EXIT_TRANSIENT)
         self.assertEqual(s.support, [])

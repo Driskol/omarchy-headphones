@@ -1,0 +1,57 @@
+Device 88:92:CC:D1:B1:F2 (public)
+	Name: WH-CH720N
+	Alias: WH-CH720N
+	Class: 0x00240404 (2360324)
+	Icon: audio-headset
+	Paired: yes
+	Bonded: yes
+	Trusted: yes
+	Blocked: no
+	Connected: yes
+	LegacyPairing: no
+	CablePairing: no
+	UUID: Vendor specific           (00000000-deca-fade-deca-deafdecacaff)
+	UUID: Headset                   (00001108-0000-1000-8000-00805f9b34fb)
+	UUID: Audio Sink                (0000110b-0000-1000-8000-00805f9b34fb)
+	UUID: A/V Remote Control Target (0000110c-0000-1000-8000-00805f9b34fb)
+	UUID: Advanced Audio Distribu.. (0000110d-0000-1000-8000-00805f9b34fb)
+	UUID: A/V Remote Control        (0000110e-0000-1000-8000-00805f9b34fb)
+	UUID: Handsfree                 (0000111e-0000-1000-8000-00805f9b34fb)
+	UUID: PnP Information           (00001200-0000-1000-8000-00805f9b34fb)
+	UUID: Generic Access Profile    (00001800-0000-1000-8000-00805f9b34fb)
+	UUID: Generic Attribute Profile (00001801-0000-1000-8000-00805f9b34fb)
+	UUID: Device Information        (0000180a-0000-1000-8000-00805f9b34fb)
+	UUID: Amazon.com Services, Inc. (0000fe03-0000-1000-8000-00805f9b34fb)
+	UUID: Google                    (0000fe2c-0000-1000-8000-00805f9b34fb)
+	UUID: Vendor specific           (0000ff01-0000-1000-8000-00805f9b34ff)
+	UUID: Vendor specific           (0000ff01-0000-1000-8000-504759592966)
+	UUID: Vendor specific           (55f80aef-d89f-41a4-9e36-0ffc88dc81ce)
+	UUID: Vendor specific           (5b833e05-6bc7-4802-8e9a-723ceca4bd8f)
+	UUID: Vendor specific           (5b833e06-6bc7-4802-8e9a-723ceca4bd8f)
+	UUID: Vendor specific           (5b833e0a-6bc7-4802-8e9a-723ceca4bd8f)
+	UUID: Vendor specific           (67a846ad-de3e-451b-a6d8-7b2899ca2370)
+	UUID: Vendor specific           (81c2e72a-0591-443e-a1ff-05f988593351)
+	UUID: Vendor specific           (8901dfa8-5c7e-4d8f-9f0c-c2b70683f5f0)
+	UUID: Vendor specific           (91c10d9c-aaef-42bd-b6d6-8a648c19213d)
+	UUID: Vendor specific           (931c7e8a-540f-4686-b798-e8df0a2ad9f7)
+	UUID: Vendor specific           (956c7b26-d49a-4ba8-b03f-b17d393cb6e2)
+	UUID: Vendor specific           (dc405470-a351-4a59-97d8-2e2e3b207fbb)
+	UUID: Vendor specific           (df21fe2c-2515-4fdb-8886-f12c4d67927c)
+	UUID: Vendor specific           (f8d1fbe4-7966-4334-8024-ff96c9330e15)
+	UUID: Vendor specific           (fa349b5f-8050-0030-0010-00001bbb231d)
+	UUID: Vendor specific           (fe59bfa8-7fe3-4a05-9d94-99fadc69faff)
+	Modalias: usb:v054Cp0EAFd0112
+	ManufacturerData.Key: 0x0469 (1129)
+	ManufacturerData.Value:
+  d7 19 5b dc 39 0c                                ..[.9.          
+	RSSI: 0xffffffbf (-65)
+	AdvertisingFlags:
+  18                                               .               
+	PreferredBearer: last-used
+	Battery Percentage: 0x28 (40)
+	BREDR.Paired: yes
+	BREDR.Bonded: yes
+	BREDR.Connected: yes
+	LE.Paired: no
+	LE.Bonded: no
+	LE.Connected: no

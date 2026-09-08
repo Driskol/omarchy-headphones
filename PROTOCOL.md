@@ -1381,3 +1381,27 @@ tools/oppo_probe.py 28:6F:40:D9:A5:A7 20 set:anc
 
 The widget's bridge holds the same profile, so turn `useModeControl` off
 before running it — a second client is refused while the first is up.
+
+## Canonical owner captures — 2026-09-08
+
+The maintainer @ncr retested his **Sony WH-CH720N** and **JBL TUNE230NC TWS**.
+Selected actual HCI packets are retained in
+[`docs/captures/sony-wh-ch720n.txt`](docs/captures/sony-wh-ch720n.txt) and
+[`docs/captures/jbl-tune230nc-tws.txt`](docs/captures/jbl-tune230nc-tws.txt),
+with original packet identifiers and timestamps. Full SDP records sit beside
+them as `*-bluetoothctl.txt`. The files identify their source and the filtering
+applied; unrelated radio traffic is omitted.
+
+The Sony capture includes mode notifications for Off, ANC and Ambient,
+Ambient levels 0, 5 and 20, and Focus on voice on/off. Its Fast Pair battery
+frame is `03 03 00 01 27`: one battery at 39%. The JBL capture includes
+Off, ANC, Ambient and TalkThru reports. Its battery frame is
+`03 03 00 03 46 50 43`: left 70%, right 80%, case 67%, none charging.
+These are samples from that session, not fixed battery expectations on hardware.
+
+The new `*-canonical.json` pins replay selected frames while leaving the old
+pins unchanged. `tests/canonical_evidence_test.py` checks their mode bytes and
+the indexed battery frames against the captures. A separate successful live
+IPC run checked all controls, refresh, reconnect of each pair, peer state and
+restoration: [`canonical-live.json`](docs/captures/canonical-live.json).
+See [`docs/CANONICAL-TESTS.md`](docs/CANONICAL-TESTS.md) for coverage and limits.

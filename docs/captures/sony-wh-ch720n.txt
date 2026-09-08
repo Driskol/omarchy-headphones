@@ -1,0 +1,195 @@
+Owner: ncr
+Model: Sony WH-CH720N
+Date: 2026-09-08
+Source: btmon on hci1, application data in HCI packets.
+Source text SHA256: 38fe93675bddb60d4aa74a1186c513dc86fc455ddf71c4538ba7b636f73b947e
+Selected protocol packets only; unrelated radio traffic omitted, terminal colours removed.
+Packet numbers, timestamps and hex dumps below are retained from the source.
+The replay selects frames from this session; it is not a timing simulation.
+
+< ACL: Handle 256 flags 0x00 dlen 24                              #403 5.019841
+      Channel: 64 len 20 [PSM 0 mode Basic (0x00)] {chan 65535}
+        95 ef 21 3e 0c 00 00 00 00 07 68 17 01 00 00 00  ..!>......h.....
+        0e a1 3c 62                                      ..<b            
+> ACL: Handle 256 flags 0x02 dlen 25                              #467 6.093157
+      Channel: 64 len 21 [PSM 0 mode Basic (0x00)] {chan 65535}
+        97 ef 20 00 3e 0c 00 00 00 00 07 69 17 01 00 01  .. .>......i....
+        00 0e a3 3c b8                                   ...<.           
+< ACL: Handle 256 flags 0x00 dlen 24                              #472 6.194922
+      Channel: 64 len 20 [PSM 0 mode Basic (0x00)] {chan 65535}
+        95 ef 21 3e 0c 01 00 00 00 07 68 17 01 01 00 00  ..!>......h.....
+        0e a3 3c 62                                      ..<b            
+> ACL: Handle 256 flags 0x02 dlen 25                              #522 6.797157
+      Channel: 64 len 21 [PSM 0 mode Basic (0x00)] {chan 65535}
+        97 ef 20 00 3e 0c 01 00 00 00 07 69 17 01 01 00  .. .>......i....
+        00 0e a4 3c b8                                   ...<.           
+< ACL: Handle 256 flags 0x00 dlen 24                              #560 7.101103
+      Channel: 64 len 20 [PSM 0 mode Basic (0x00)] {chan 65535}
+        95 ef 21 3e 0c 00 00 00 00 07 68 17 01 01 01 00  ..!>......h.....
+        0e a3 3c 62                                      ..<b            
+> ACL: Handle 256 flags 0x02 dlen 25                              #617 7.661160
+      Channel: 64 len 21 [PSM 0 mode Basic (0x00)] {chan 65535}
+        97 ef 20 00 3e 0c 00 00 00 00 07 69 17 01 01 01  .. .>......i....
+        00 0e a4 3c b8                                   ...<.           
+< ACL: Handle 256 flags 0x00 dlen 24                              #749 9.172637
+      Channel: 64 len 20 [PSM 0 mode Basic (0x00)] {chan 65535}
+        95 ef 21 3e 0c 01 00 00 00 07 68 17 01 01 01 00  ..!>......h.....
+        00 96 3c 62                                      ..<b            
+> ACL: Handle 256 flags 0x02 dlen 25                              #791 9.766160
+      Channel: 64 len 21 [PSM 0 mode Basic (0x00)] {chan 65535}
+        97 ef 20 00 3e 0c 01 00 00 00 07 69 17 01 01 01  .. .>......i....
+        00 00 97 3c b8                                   ...<.           
+< ACL: Handle 256 flags 0x00 dlen 24                             #816 10.074307
+      Channel: 64 len 20 [PSM 0 mode Basic (0x00)] {chan 65535}
+        95 ef 21 3e 0c 00 00 00 00 07 68 17 01 01 01 00  ..!>......h.....
+        05 9a 3c 62                                      ..<b            
+> ACL: Handle 256 flags 0x02 dlen 25                             #842 10.675158
+      Channel: 64 len 21 [PSM 0 mode Basic (0x00)] {chan 65535}
+        97 ef 20 00 3e 0c 00 00 00 00 07 69 17 01 01 01  .. .>......i....
+        00 05 9b 3c b8                                   ...<.           
+< ACL: Handle 256 flags 0x00 dlen 24                             #855 10.975633
+      Channel: 64 len 20 [PSM 0 mode Basic (0x00)] {chan 65535}
+        95 ef 21 3e 0c 01 00 00 00 07 68 17 01 01 01 00  ..!>......h.....
+        14 aa 3c 62                                      ..<b            
+> ACL: Handle 256 flags 0x02 dlen 25                             #897 11.547156
+      Channel: 64 len 21 [PSM 0 mode Basic (0x00)] {chan 65535}
+        97 ef 20 00 3e 0c 01 00 00 00 07 69 17 01 01 01  .. .>......i....
+        00 14 ab 3c b8                                   ...<.           
+< ACL: Handle 256 flags 0x00 dlen 24                             #925 11.880199
+      Channel: 64 len 20 [PSM 0 mode Basic (0x00)] {chan 65535}
+        95 ef 21 3e 0c 00 00 00 00 07 68 17 01 01 01 01  ..!>......h.....
+        14 aa 3c 62                                      ..<b            
+> ACL: Handle 256 flags 0x02 dlen 25                             #966 12.466155
+      Channel: 64 len 21 [PSM 0 mode Basic (0x00)] {chan 65535}
+        97 ef 20 00 3e 0c 00 00 00 00 07 69 17 01 01 01  .. .>......i....
+        01 14 ab 3c b8                                   ...<.           
+< ACL: Handle 256 flags 0x00 dlen 24                             #988 12.779846
+      Channel: 64 len 20 [PSM 0 mode Basic (0x00)] {chan 65535}
+        95 ef 21 3e 0c 01 00 00 00 07 68 17 01 01 01 00  ..!>......h.....
+        14 aa 3c 62                                      ..<b            
+> ACL: Handle 256 flags 0x02 dlen 25                            #1022 13.376156
+      Channel: 64 len 21 [PSM 0 mode Basic (0x00)] {chan 65535}
+        97 ef 20 00 3e 0c 01 00 00 00 07 69 17 01 01 01  .. .>......i....
+        00 14 ab 3c b8                                   ...<.           
+> ACL: Handle 256 flags 0x02 dlen 16                            #1089 14.079162
+      Channel: 64 len 12 [PSM 0 mode Basic (0x00)] {chan 65535}
+        bf ef 0e 00 03 01 00 03 f4 2f fc 78              ........./.x    
+> ACL: Handle 256 flags 0x02 dlen 19                            #1091 14.110174
+      Channel: 64 len 15 [PSM 0 mode Basic (0x00)] {chan 65535}
+        bf ef 14 00 03 02 00 06 ca d0 19 9c 8c d3 78     ..............x 
+> ACL: Handle 256 flags 0x02 dlen 14                            #1095 14.135159
+      Channel: 64 len 10 [PSM 0 mode Basic (0x00)] {chan 65535}
+        bf ef 0a 00 03 03 00 01 27 78                    ........'x      
+< BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x00 dlen 19  #2244 26.403180
+      Channel: 65 len 15 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x93 cr 1 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 11
+         FCS: 0xcd
+        3e 0c 00 00 00 00 02 00 00 0e 3c cd              >.........<.    
+> BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x02 dlen 26  #2249 26.522166
+      Channel: 65 len 22 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x91 cr 0 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 17
+         FCS: 0x17
+        3e 0c 00 00 00 00 08 01 00 03 00 10 02 00 00 2a  >..............*
+        3c 17                                            <.              
+< BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x00 dlen 19  #2251 26.522234
+      Channel: 65 len 15 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x93 cr 1 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 11
+         FCS: 0xcd
+        3e 0c 01 00 00 00 02 66 17 8c 3c cd              >......f..<.    
+> BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x02 dlen 25  #2258 26.642158
+      Channel: 65 len 21 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x91 cr 0 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 16
+         FCS: 0x17
+        3e 0c 01 00 00 00 07 67 17 01 01 01 00 14 a9 3c  >......g.......<
+        17                                               .               
+< BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x00 dlen 24  #2261 26.936573
+      Channel: 65 len 20 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x93 cr 1 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 16
+         FCS: 0xcd
+        3e 0c 00 00 00 00 07 68 17 01 01 01 00 0e a3 3c  >......h.......<
+        cd                                               .               
+> BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x02 dlen 25  #2265 27.501156
+      Channel: 65 len 21 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x91 cr 0 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 16
+         FCS: 0x17
+        3e 0c 00 00 00 00 07 69 17 01 01 01 00 0e a4 3c  >......i.......<
+        17                                               .               
+< BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x00 dlen 24  #2267 27.525588
+      Channel: 65 len 20 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x93 cr 1 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 16
+         FCS: 0xcd
+        3e 0c 01 00 00 00 07 68 17 01 01 01 00 0e a4 3c  >......h.......<
+        cd                                               .               
+< BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x00 dlen 24  #2271 27.572581
+      Channel: 65 len 20 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x93 cr 1 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 16
+         FCS: 0xcd
+        3e 0c 00 00 00 00 07 68 17 01 01 00 00 0e a2 3c  >......h.......<
+        cd                                               .               
+> BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x02 dlen 25  #2395 28.156154
+      Channel: 65 len 21 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x91 cr 0 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 16
+         FCS: 0x17
+        3e 0c 01 00 00 00 07 69 17 01 01 00 00 0e a4 3c  >......i.......<
+        17                                               .               
+< BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x00 dlen 19  #4086 50.695184
+      Channel: 65 len 15 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x93 cr 1 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 11
+         FCS: 0xcd
+        3e 0c 00 00 00 00 02 00 00 0e 3c cd              >.........<.    
+> BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x02 dlen 26  #4098 50.785158
+      Channel: 65 len 22 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x91 cr 0 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 17
+         FCS: 0x17
+        3e 0c 00 00 00 00 08 01 00 03 00 10 02 00 00 2a  >..............*
+        3c 17                                            <.              
+< BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x00 dlen 19  #4100 50.785257
+      Channel: 65 len 15 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x93 cr 1 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 11
+         FCS: 0xcd
+        3e 0c 01 00 00 00 02 66 17 8c 3c cd              >......f..<.    
+> BR-ACL: Handle 256 [88:92:CC:D1:B1:F2 (.. flags 0x02 dlen 25  #4119 50.885169
+      Channel: 65 len 21 [PSM 3 mode Basic (0x00)] {chan 2}
+      RFCOMM: Unnumbered Info with Header Check (UIH) (0xef)
+         Address: 0x91 cr 0 dlci 0x24
+         Control: 0xef poll/final 0
+         Length: 16
+         FCS: 0x17
+        3e 0c 01 00 00 00 07 67 17 01 01 00 00 0e a2 3c  >......g.......<
+        17                                               .               

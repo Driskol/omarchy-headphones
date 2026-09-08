@@ -29,7 +29,7 @@ WEAR_TYPE = bridge_module.WEARING_STATUS_TYPE
 
 
 class Session(harness.Session):
-    """A Sony session. "device" in a pin is an MDR payload as hex — the frame
+    """A Sony session. "device" in a pin is an MDR payload as hex, or {"wire": "hex"} for an exact captured frame. For a payload, the frame
     around it (type 0x0C, seq 0, length, checksum, byte stuffing) is built the
     way the headset builds one. "sent" is the payload of every 0x0C frame the
     bridge wrote, as hex; the ACKs it sent for device frames are left out."""
@@ -49,7 +49,10 @@ class Session(harness.Session):
         self.bridge.parse_buffer()
 
     def device(self, spec):
-        self.receive(bridge_module.encode(DATA_MDR, 0, harness.hexbytes(spec)))
+        if isinstance(spec, dict):
+            self.receive(harness.hexbytes(spec["wire"]))
+        else:
+            self.receive(bridge_module.encode(DATA_MDR, 0, harness.hexbytes(spec)))
 
     def ack(self):
         """What the headset sends after every command, freeing the queue."""

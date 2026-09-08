@@ -117,3 +117,8 @@ model: what the device answers, what the bridge writes and prints, frame for
 frame. The harness's docstring says how a pin is written. The bridge's only
 effects on the world are its writes and its stdout, and a Session captures
 both; nothing in the tests touches D-Bus, a socket or a child process.
+
+The canonical owner examples are JBL TUNE230NC TWS and Sony WH-CH720N,
+prepared by @ncr. `docs/CANONICAL-TESTS.md` maps their captures, pins, fault
+cases, shared battery tests and live integration check. Use that coverage
+as the reference for new support, with the new device's own observed frames.

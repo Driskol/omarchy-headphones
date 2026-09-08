@@ -149,15 +149,26 @@ open a pull request against `github.com/ncr/omarchy-headphones` with the result.
    `aeac4a03-dff5-498f-843a-34487cf133eb` is Nothing NT Link, a UUID
    starting `0cf12d31-fac3-4553-bd80-d6832e7` is Soundcore's vendor channel;
    JBL earbuds are probed over BLE by the plugin itself.
-2. If battery and the mode row both already work, nothing needs
-   writing: the pull request is my device's row in the table in `README.md` —
-   device, two ticks, my GitHub handle — plus the screenshot from step 4.
+2. If battery and the mode row both already work, no bridge change is needed.
+   Still bring my device's own capture, pin and confirmed capabilities from
+   step 3, plus its README row and the screenshot from step 4.
 3. Otherwise extend the plugin. Read `AGENTS.md` in the plugin directory
    first: it is the map — which files a new model or a new brand touches,
    the bridge contract (`BRIDGE.md`), how a session is pinned
    (`tests/pins/`), and `tools/check`, the one command that runs everything
    a pull request is held to. Run `tools/check` until it passes; CI runs the
    same script on the pull request.
+
+   The canonical examples are JBL TUNE230NC TWS and Sony WH-CH720N,
+   prepared and hardware-tested by the maintainer @ncr on his own headphones.
+   Read `docs/CANONICAL-TESTS.md`, their `*-canonical.json` pins, captured
+   packets and shared fault/battery tests. Match their coverage for the
+   capabilities my model actually offers: all mode replies, battery shape,
+   malformed/partial data, unsolicited changes, silence vs disconnect,
+   recovery and isolation from another device. Use my device's own frames;
+   canonical means a coverage example, not permission to reuse their bytes.
+   Record a live test with device-reported results and restored settings;
+   clearly list anything untested or not applicable. Preserve all existing pins.
 
    Two rules hold whatever brand this is, because nobody has more than their
    own headphones — the maintainer cannot test mine and I cannot test
