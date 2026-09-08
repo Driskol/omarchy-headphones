@@ -778,3 +778,29 @@ Deno.test("bridge battery reads what the line carried and nothing more", () => {
   assertEquals(Model.bridgeCaseStale({ battery: { case: 50 } }), false);
   assertEquals(Model.bridgeCaseStale(null), false);
 });
+
+Deno.test("controlBackend picks oppo from the HeyMelody UUID", () => {
+  const oppo = ["00001101-0000-1000-8000-00805f9b34fb", Model.OPPO_HEYMELODY_UUID];
+  assertEquals(Model.controlBackend(oppo, ""), "oppo");
+  // A Fast Pair address does not outrank the device's own record.
+  assertEquals(Model.controlBackend(oppo, "48:B4:41:00:00:01"), "oppo");
+  assertEquals(Model.controlBackend([Model.OPPO_HEYMELODY_UUID.toUpperCase()], ""), "oppo");
+  // Every earlier backend wins over it; it wins over the JBL fallback.
+  assertEquals(
+    Model.controlBackend([Model.OPPO_HEYMELODY_UUID, Model.SONY_MDR_V2_UUID], ""),
+    "sony",
+  );
+  assertEquals(
+    Model.controlBackend([Model.SAMSUNG_SPP_UUID, Model.OPPO_HEYMELODY_UUID], ""),
+    "samsung",
+  );
+  assertEquals(
+    Model.controlBackend([Model.NOTHING_NT_LINK_UUID, Model.OPPO_HEYMELODY_UUID], ""),
+    "nothing",
+  );
+  assertEquals(
+    Model.controlBackend([Model.CSR_GAIA_UUID, Model.OPPO_HEYMELODY_UUID], ""),
+    "xiaomi",
+  );
+  assertEquals(Model.isClassicBackend("oppo"), true);
+});
