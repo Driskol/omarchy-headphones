@@ -59,7 +59,7 @@
         "type": "boolean",
         "label": "Read battery over Google Fast Pair",
         "defaultValue": true,
-        "description": "Left, right and case levels over the Fast Pair channel. Off: BlueZ's single figure only, and no JBL noise control — its BLE address is announced on this channel. Sony, Samsung, Nothing, Soundcore and Xiaomi are unaffected: they serve their own channels."
+        "description": "Left, right and case levels over the Fast Pair channel. Off: battery from a supported noise-control bridge while noise control is enabled, otherwise BlueZ's single figure if available. JBL noise control needs Fast Pair for its BLE address; bridges using the device's own channel work without Fast Pair."
       },
       {
         "key": "useModeControl",

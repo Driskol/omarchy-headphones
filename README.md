@@ -271,7 +271,7 @@ and booleans), or the widget's entry in `~/.config/omarchy/shell.json`.
 | Key                    | Default | Meaning                                                                                                                  |
 |:-----------------------|:--------|:-------------------------------------------------------------------------------------------------------------------------|
 | `deviceMatch`          | `""`    | Substring of name or address; empty shows every connected audio device, set it to follow only the matching ones.         |
-| `useFastPair`          | `true`  | Battery over Fast Pair. Off: BlueZ's single figure, no reader, and no JBL mode row (its BLE address is announced there). |
+| `useFastPair`          | `true`  | Battery over Fast Pair. Off: battery from a supported noise-control bridge while `useModeControl` is on, otherwise BlueZ's single figure if available. No Fast Pair reader or JBL mode row (its BLE address is announced there). |
 | `useModeControl`       | `true`  | The mode row (noise control) and the link behind it.                                                                           |
 | `lowBatteryThreshold`  | `20`    | Urgent icon and notification from here down (5-50).                                                                      |
 | `showPercentage`       | `false` | A written percentage instead of the drawn meter; costs a bar slot.                                                       |
