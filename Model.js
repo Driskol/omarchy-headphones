@@ -429,7 +429,8 @@ function readerLevel(state, key) {
 // advertising the UUID is the whole claim — a device that lists it speaks it.
 // Sony serves two generations on two UUIDs, and both are the same bridge.
 // Nothing's NT Link is the same shape: its own UUID in the record, its own
-// RFCOMM channel (15), carrying noise control, battery and low latency.
+// RFCOMM channel (15 on the earbuds, 28 on the CMF Headphone Pro), carrying
+// noise control, battery and low latency.
 // Xiaomi Buds 5 Pro (and other QCC sets that advertise CSR GAIA) speak Compact
 // GAIA on standard SPP; the GAIA UUID is the claim, SPP is the socket.
 // JBL's is a BLE GATT service at an address that rotates and is announced only

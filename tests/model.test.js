@@ -858,6 +858,33 @@ const DEVICES = [
     bleAddress: "48:B4:41:00:00:01",
   },
   {
+    // The real list from `bluetoothctl info`, @adilahmad17's headphones. Two
+    // vendor UUIDs (0000fdb3-… and the 66666666-… placeholder Nothing ships)
+    // that no row claims, alongside NT Link; the standard audio profiles fill
+    // the rest. Same backend as the earbuds, a different RFCOMM channel.
+    model: "CMF Headphone Pro",
+    backend: "nothing",
+    uuids: [
+      "00001000-0000-1000-8000-00805f9b34fb",
+      "00001101-0000-1000-8000-00805f9b34fb",
+      "0000110b-0000-1000-8000-00805f9b34fb",
+      "0000110c-0000-1000-8000-00805f9b34fb",
+      "0000110d-0000-1000-8000-00805f9b34fb",
+      "0000110e-0000-1000-8000-00805f9b34fb",
+      "0000110f-0000-1000-8000-00805f9b34fb",
+      "0000111e-0000-1000-8000-00805f9b34fb",
+      "00001200-0000-1000-8000-00805f9b34fb",
+      "00001203-0000-1000-8000-00805f9b34fb",
+      "00001800-0000-1000-8000-00805f9b34fb",
+      "00001801-0000-1000-8000-00805f9b34fb",
+      "0000fdb3-3817-47d9-a10a-1f6656618f8e",
+      "66666666-6666-6666-6666-666666666666",
+      "aeac4a03-dff5-498f-843a-34487cf133eb",
+      "df21fe2c-2515-4fdb-8886-f12c4d67927c",
+    ],
+    bleAddress: "48:B4:41:00:00:01",
+  },
+  {
     model: "Sony WH-1000XM4",
     backend: "sony",
     uuids: [

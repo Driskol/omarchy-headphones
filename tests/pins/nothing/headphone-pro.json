@@ -1,0 +1,289 @@
+{
+  "model": "CMF Headphone Pro",
+  "owner": "adilahmad17",
+  "bridge": "nothing-bridge",
+  "capture": "docs/captures/nothing-headphone-pro.txt",
+  "notes": "NT Link on RFCOMM channel 28 (15 is refused). Same protocol as the Nothing earbuds, so nothing-bridge parses it unchanged; the frames below are this headset's own, from docs/captures/nothing-headphone-pro.txt. Noise control uses the six-byte triplet form 01 <mode> 00 02 <level> 00. Battery is one component (06, headset). What is frozen is every frame the bridge writes and every line it prints.",
+  "session": {},
+  "steps": [
+    {
+      "call": "open",
+      "note": "the socket is up (on channel 28, though the harness fakes it): device info first"
+    },
+    {
+      "sent": [
+        "55 60 01 06 c0 00 00 01 91 1f"
+      ]
+    },
+    {
+      "device": {
+        "cmd": "06",
+        "dir": "40",
+        "payload": "00"
+      },
+      "note": "the CMF answers with ASCII firmware/serial lines; the bridge does not read them, they only unlock the real queries"
+    },
+    {
+      "sent": [
+        "55 60 01 06 c0 00 00 01 91 1f",
+        "55 60 01 07 c0 00 00 01 ac df",
+        "55 60 01 1e c0 00 00 01 b1 1d",
+        "55 60 01 41 c0 00 00 01 25 10"
+      ],
+      "note": "battery, noise control, low latency"
+    },
+    {
+      "device": {
+        "cmd": "07",
+        "dir": "40",
+        "payload": "01 06 0f"
+      },
+      "note": "one pair: component 06 (headset), 15%, not charging"
+    },
+    {
+      "lines": [],
+      "note": "nothing is printed until the mode is known"
+    },
+    {
+      "device": {
+        "cmd": "1e",
+        "dir": "40",
+        "payload": "01 04 00 02 04 00"
+      },
+      "note": "noise cancelling, adaptive — mode byte at [1], the 02 pair carries the strength"
+    },
+    {
+      "line": {
+        "modes": true,
+        "mode": "anc",
+        "available": [
+          "off",
+          "anc",
+          "ambient"
+        ],
+        "ancLevel": "adaptive",
+        "ancLevels": [
+          "low",
+          "mid",
+          "high",
+          "adaptive"
+        ],
+        "battery": {
+          "headset": 15,
+          "charging": [],
+          "caseStale": false
+        }
+      }
+    },
+    {
+      "device": {
+        "cmd": "41",
+        "dir": "40",
+        "payload": "00"
+      },
+      "note": "an unset device answers 00 for low latency; read as off"
+    },
+    {
+      "line_has": {
+        "latency": false
+      }
+    },
+    {
+      "command": "set off"
+    },
+    {
+      "sent_last": "55 60 01 0f f0 03 00 01 01 05 00 fb 17"
+    },
+    {
+      "device": {
+        "cmd": "0f",
+        "dir": "70"
+      },
+      "note": "a set is acked, not answered"
+    },
+    {
+      "line_count": 2,
+      "note": "the command and its ack alone change nothing the panel shows"
+    },
+    {
+      "device": {
+        "cmd": "1e",
+        "dir": "40",
+        "payload": "01 05 00 02 04 00"
+      },
+      "note": "the read-back: off, and the strength left untouched in slot 2"
+    },
+    {
+      "line_has": {
+        "mode": "off",
+        "ancLevel": "adaptive"
+      }
+    },
+    {
+      "command": "set ambient"
+    },
+    {
+      "sent_last": "55 60 01 0f f0 03 00 01 01 07 00 fa 77"
+    },
+    {
+      "device": {
+        "cmd": "1e",
+        "dir": "40",
+        "payload": "01 07 00 02 04 00"
+      }
+    },
+    {
+      "line_has": {
+        "mode": "ambient"
+      }
+    },
+    {
+      "command": "level low"
+    },
+    {
+      "sent_last": "55 60 01 0f f0 03 00 01 01 03 00 f8 b7"
+    },
+    {
+      "device": {
+        "cmd": "1e",
+        "dir": "40",
+        "payload": "01 03 00 02 03 00"
+      },
+      "note": "a numbered strength moves the mode byte and the 02 byte together"
+    },
+    {
+      "line_has": {
+        "mode": "anc",
+        "ancLevel": "low"
+      }
+    },
+    {
+      "device": {
+        "cmd": "03",
+        "dir": "e0",
+        "payload": "01 02 00 02 02 00"
+      },
+      "note": "E0 03: the headset announcing Mid, changed on the device itself"
+    },
+    {
+      "line_has": {
+        "mode": "anc",
+        "ancLevel": "mid"
+      }
+    },
+    {
+      "device": {
+        "cmd": "03",
+        "dir": "e0",
+        "payload": "01 01 00 02 01 00"
+      },
+      "note": "and High"
+    },
+    {
+      "line_has": {
+        "mode": "anc",
+        "ancLevel": "high"
+      }
+    },
+    {
+      "device": {
+        "cmd": "03",
+        "dir": "e0",
+        "payload": "01 01 00 02 01 00"
+      },
+      "note": "the same announcement again"
+    },
+    {
+      "line_count": 7,
+      "note": "an identical report is not printed a second time"
+    },
+    {
+      "command": "latency on"
+    },
+    {
+      "sent_last": "55 60 01 40 f0 01 00 01 01 50 32"
+    },
+    {
+      "device": {
+        "cmd": "41",
+        "dir": "40",
+        "payload": "01"
+      }
+    },
+    {
+      "line_has": {
+        "latency": true
+      }
+    },
+    {
+      "command": "latency off"
+    },
+    {
+      "sent_last": "55 60 01 40 f0 01 00 01 02 10 33"
+    },
+    {
+      "device": {
+        "cmd": "41",
+        "dir": "40",
+        "payload": "02"
+      }
+    },
+    {
+      "line_has": {
+        "latency": false
+      }
+    },
+    {
+      "device": {
+        "cmd": "01",
+        "dir": "e0",
+        "payload": "01 06 0f"
+      },
+      "note": "E0 01: the headset re-announcing the same 15%"
+    },
+    {
+      "line_count": 9,
+      "note": "unchanged battery, no new line"
+    },
+    {
+      "call": "poll",
+      "note": "touch controls are not reliably announced, so the mode is re-asked on a timer"
+    },
+    {
+      "sent_last": "55 60 01 1e c0 00 00 01 b1 1d"
+    },
+    {
+      "command": "set purple",
+      "note": "a name the panel's vocabulary does not carry"
+    },
+    {
+      "sent_last": "55 60 01 1e c0 00 00 01 b1 1d",
+      "note": "dropped: nothing new was sent"
+    },
+    {
+      "command": "set anc",
+      "note": "back to the strength last seen (high)"
+    },
+    {
+      "sent_last": "55 60 01 0f f0 03 00 01 01 01 00 f9 d7"
+    },
+    {
+      "sent": [
+        "55 60 01 06 c0 00 00 01 91 1f",
+        "55 60 01 07 c0 00 00 01 ac df",
+        "55 60 01 1e c0 00 00 01 b1 1d",
+        "55 60 01 41 c0 00 00 01 25 10",
+        "55 60 01 0f f0 03 00 01 01 05 00 fb 17",
+        "55 60 01 0f f0 03 00 01 01 07 00 fa 77",
+        "55 60 01 0f f0 03 00 01 01 03 00 f8 b7",
+        "55 60 01 40 f0 01 00 01 01 50 32",
+        "55 60 01 40 f0 01 00 01 02 10 33",
+        "55 60 01 1e c0 00 00 01 b1 1d",
+        "55 60 01 0f f0 03 00 01 01 01 00 f9 d7"
+      ]
+    },
+    {
+      "exit": null
+    }
+  ]
+}

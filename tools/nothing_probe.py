@@ -20,7 +20,9 @@ import struct
 import sys
 import time
 
-RFCOMM_CHANNEL = 15
+# NT Link's RFCOMM channel: 15 on the earbuds, 28 on the CMF Headphone Pro.
+# Tried in order, like nothing-bridge.
+RFCOMM_CHANNELS = (15, 28)
 SOF = 0x55
 CTRL_WITH_CRC = 0x0160
 
@@ -141,20 +143,25 @@ def main():
     value = argv[2] if len(argv) > 2 else ""
 
     sock = None
+    channel = None
     for attempt in range(4):
-        sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-        sock.settimeout(5.0)
-        try:
-            sock.connect((address, RFCOMM_CHANNEL))
+        for candidate in RFCOMM_CHANNELS:
+            sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+            sock.settimeout(5.0)
+            try:
+                sock.connect((address, candidate))
+                channel = candidate
+                break
+            except OSError as error:
+                sock.close()
+                sock = None
+                print(stamp(), "connect attempt %d, channel %d: %s" % (attempt + 1, candidate, error))
+        if sock is not None:
             break
-        except OSError as error:
-            sock.close()
-            sock = None
-            print(stamp(), "connect attempt %d: %s" % (attempt + 1, error))
-            time.sleep(1.5)
+        time.sleep(1.5)
     if sock is None:
         return 1
-    print(stamp(), "connected to channel %d" % RFCOMM_CHANNEL)
+    print(stamp(), "connected to channel %d" % channel)
 
     try:
         send(sock, 0x06, 0xC0)

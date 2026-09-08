@@ -27,12 +27,15 @@ Exit codes, which the shell-side service reads to decide what to do next:
         About this machine, not about the device
 
 Sibling of sony-bridge and xiaomi-bridge: the same stdout/stdin/exit-code
-contract, a different channel. Nothing serves its own RFCOMM channel (15) for
-the Nothing X protocol, and advertises the NT Link UUID
+contract, a different channel. Nothing serves its own RFCOMM channel for the
+Nothing X protocol, and advertises the NT Link UUID
 (aeac4a03-dff5-498f-843a-34487cf133eb) in its SDP record, which is how the
 widget picks this backend. The socket is opened directly rather than through
-an org.bluez.Profile1: the channel number is fixed, so there is no SDP lookup
-to ask BlueZ for.
+an org.bluez.Profile1: the channel is one of a short fixed set, so there is no
+SDP lookup to ask BlueZ for. The earbuds (Ear, Ear (a), …) serve it on 15; the
+CMF Headphone Pro serves the same protocol, frame for frame, on 28. The set is
+tried in order, 15 first, so a device that answers on 15 never sees a connect
+to 28.
 
 The vocabulary is the panel's, not Nothing's. Nothing X offers six settings —
 Off, Transparency, and noise cancelling at Low, Mid, High or Adaptive — and
@@ -77,7 +80,10 @@ import time
 USAGE = "usage: nothing-bridge <classic-address>"
 ADDRESS = re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
 
-RFCOMM_CHANNEL = 15
+# NT Link's RFCOMM channel, by device. Earbuds (Ear, Ear (a), …): 15. CMF
+# Headphone Pro: 28. Tried in order; 15 first keeps the earbuds' path exactly
+# what it was before 28 was added.
+RFCOMM_CHANNELS = (15, 28)
 
 SOF = 0x55
 CTRL_WITH_CRC = 0x0160
@@ -291,6 +297,7 @@ class Bridge:
         self.pending_stdin = ""
         self.exit_code = None
 
+        self.channel = None
         self.mode = None
         self.level = None
         self.latency = None
@@ -314,18 +321,20 @@ class Bridge:
         for attempt in range(CONNECT_ATTEMPTS):
             if attempt:
                 time.sleep(CONNECT_RETRY)
-            sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM,
-                                 socket.BTPROTO_RFCOMM)
-            sock.settimeout(CONNECT_TIMEOUT)
-            try:
-                sock.connect((self.address, RFCOMM_CHANNEL))
-            except OSError as error:
-                sock.close()
-                last_error = error
-                continue
-            sock.setblocking(False)
-            self.sock = sock
-            return True
+            for channel in RFCOMM_CHANNELS:
+                sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM,
+                                     socket.BTPROTO_RFCOMM)
+                sock.settimeout(CONNECT_TIMEOUT)
+                try:
+                    sock.connect((self.address, channel))
+                except OSError as error:
+                    sock.close()
+                    last_error = error
+                    continue
+                sock.setblocking(False)
+                self.sock = sock
+                self.channel = channel
+                return True
         reason = getattr(last_error, "strerror", None) or str(last_error)
         self.finish(EXIT_TRANSIENT, "cannot open the Nothing channel: %s" % reason)
         return False

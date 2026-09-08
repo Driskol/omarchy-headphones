@@ -1,0 +1,99 @@
+Owner: adilahmad17
+Model: CMF Headphone Pro
+Date: 2026-09-08
+Source: tools/nothing_probe.py-style probe on RFCOMM channel 28 (one
+  continuous NT Link session: initial read, every mode / ANC level /
+  low-latency set with a read-back after each, restore in a finally).
+Colours removed. The device serial in the 06 device-info payload
+  (bytes 'CI...' / ascii) is replaced with x's; it is not a frame the
+  bridge parses. Every other byte is verbatim. Timestamps are the
+  probe's own elapsed clock, kept for ordering, not a timing model.
+
+  0.05s connected to channel 28
+
+### INITIAL STATE
+  0.05s -> device-info    get    55 60 01 06 c0 00 00 01 91 1f
+  0.09s <- latency        answer 55 60 01 41 40 01 00 ff 00 91 99   low latency off
+  0.11s <- cmd-0x09       0x7c   55 60 06 09 7c 03 00 ff 00 04 00 71 7d
+  0.13s <- event-0x19     event  55 00 03 19 e0 02 00 00 01 00
+  0.14s <- anc-event      event  55 00 03 03 e0 06 00 00 01 04 00 02 04 00   mode adaptive level=adaptive
+  0.16s <- device-info    answer 55 60 01 06 40 3f 00 01 04 36 2c 31 2c 31 2e 30 2e 30 2e 32 0a 36 2c 32 2c 31 2e 30 2e 31 2e 34 34 0a 36 2c 34 2c 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 78 0a 36 2c 36 2c 46 45 36 46 33 43 45 45 42 45 32 43 a5 4b   ascii '\x046,1,1.0.0.2\n6,2,1.0.1.44\n6,4,xxxxxxxxxxxxxxxx\n6,6,FE6F3CEEBE2C'
+  1.56s -> battery        get    55 60 01 07 c0 00 00 01 ac df
+  1.56s -> anc            get    55 60 01 1e c0 00 00 01 b1 1d
+  1.56s -> latency        get    55 60 01 41 c0 00 00 01 25 10
+  1.56s -> codec-flag     get    55 60 01 29 c0 00 00 01 44 d9
+  1.63s <- battery        answer 55 60 01 07 40 03 00 01 01 06 0f 0b 8e   headset 15%
+  1.63s <- anc            answer 55 60 01 1e 40 06 00 01 01 04 00 02 04 00 88 ba   mode adaptive level=adaptive
+  1.65s <- latency        answer 55 60 01 41 40 01 00 01 00 d1 f9   low latency off
+  1.65s <- codec-flag     answer 55 60 01 29 40 01 00 01 00 d9 11
+
+### SET ANC -> off
+  4.57s -> anc-set        set    55 60 01 0f f0 03 00 01 01 05 00 fb 17
+  4.59s <- anc-set        ack    55 60 01 0f 70 00 00 01 6b de
+  4.60s <- anc-event      event  55 00 03 03 e0 06 00 00 01 05 00 02 04 00   mode off level=adaptive
+  5.58s -> anc            get    55 60 01 1e c0 00 00 01 b1 1d
+  5.60s <- anc            answer 55 60 01 1e 40 06 00 01 01 05 00 02 04 00 b5 7a   mode off level=adaptive
+  6.13s <- battery-event  event  55 00 03 01 e0 03 00 00 01 06 0f   headset 15%
+
+### SET ANC -> transparency
+  7.58s -> anc-set        set    55 60 01 0f f0 03 00 01 01 07 00 fa 77
+  7.60s <- anc-set        ack    55 60 01 0f 70 00 00 01 6b de
+  7.60s <- anc-event      event  55 00 03 03 e0 06 00 00 01 07 00 02 04 00   mode transparency level=adaptive
+  8.59s -> anc            get    55 60 01 1e c0 00 00 01 b1 1d
+  8.62s <- anc            answer 55 60 01 1e 40 06 00 01 01 07 00 02 04 00 cc ba   mode transparency level=adaptive
+
+### SET ANC -> adaptive
+ 10.60s -> anc-set        set    55 60 01 0f f0 03 00 01 01 04 00 fa 87
+ 10.63s <- anc-set        ack    55 60 01 0f 70 00 00 01 6b de
+ 10.63s <- anc-event      event  55 00 03 03 e0 06 00 00 01 04 00 02 04 00   mode adaptive level=adaptive
+ 11.60s -> anc            get    55 60 01 1e c0 00 00 01 b1 1d
+ 11.63s <- anc            answer 55 60 01 1e 40 06 00 01 01 04 00 02 04 00 88 ba   mode adaptive level=adaptive
+
+### SET ANC -> low
+ 13.61s -> anc-set        set    55 60 01 0f f0 03 00 01 01 03 00 f8 b7
+ 13.64s <- anc-set        ack    55 60 01 0f 70 00 00 01 6b de
+ 13.64s <- anc-event      event  55 00 03 03 e0 06 00 00 01 03 00 02 03 00   mode low level=low
+ 14.62s -> anc            get    55 60 01 1e c0 00 00 01 b1 1d
+ 14.64s <- anc            answer 55 60 01 1e 40 06 00 01 01 03 00 02 03 00 3f 4a   mode low level=low
+ 16.13s <- battery-event  event  55 00 03 01 e0 03 00 00 01 06 0f   headset 15%
+
+### SET ANC -> mid
+ 16.62s -> anc-set        set    55 60 01 0f f0 03 00 01 01 02 00 f9 27
+ 16.65s <- anc-set        ack    55 60 01 0f 70 00 00 01 6b de
+ 16.65s <- anc-event      event  55 00 03 03 e0 06 00 00 01 02 00 02 02 00   mode mid level=mid
+ 17.63s -> anc            get    55 60 01 1e c0 00 00 01 b1 1d
+ 17.65s <- anc            answer 55 60 01 1e 40 06 00 01 01 02 00 02 02 00 03 1a   mode mid level=mid
+
+### SET ANC -> high
+ 19.64s -> anc-set        set    55 60 01 0f f0 03 00 01 01 01 00 f9 d7
+ 19.68s <- anc-set        ack    55 60 01 0f 70 00 00 01 6b de
+ 19.68s <- anc-event      event  55 00 03 03 e0 06 00 00 01 01 00 02 01 00   mode high level=high
+ 20.64s -> anc            get    55 60 01 1e c0 00 00 01 b1 1d
+ 20.66s <- anc            answer 55 60 01 1e 40 06 00 01 01 01 00 02 01 00 47 ea   mode high level=high
+
+### LOW LATENCY ON
+ 22.65s -> latency-set    set    55 60 01 40 f0 01 00 01 01 50 32
+ 22.70s <- latency-set    ack    55 60 01 40 70 00 00 01 3e 10
+ 23.66s -> latency        get    55 60 01 41 c0 00 00 01 25 10
+ 23.69s <- latency        answer 55 60 01 41 40 01 00 01 01 10 39   low latency on
+
+### LOW LATENCY OFF
+ 25.67s -> latency-set    set    55 60 01 40 f0 01 00 01 02 10 33
+ 25.69s <- latency-set    ack    55 60 01 40 70 00 00 01 3e 10
+ 26.14s <- battery-event  event  55 00 03 01 e0 03 00 00 01 06 0f   headset 15%
+ 26.67s -> latency        get    55 60 01 41 c0 00 00 01 25 10
+ 26.70s <- latency        answer 55 60 01 41 40 01 00 01 02 50 38   low latency off
+
+### UNSUPPORTED / UNKNOWN COMMAND 0x2A get
+ 28.68s -> 0x2a           get    55 60 01 2a c0 00 00 01 00 d9
+
+### RESTORE -> ANC/adaptive, low latency off
+ 30.69s -> anc-set        set    55 60 01 0f f0 03 00 01 01 04 00 fa 87
+ 30.73s <- anc-set        ack    55 60 01 0f 70 00 00 01 6b de
+ 30.73s <- anc-event      event  55 00 03 03 e0 06 00 00 01 04 00 02 04 00   mode adaptive level=adaptive
+ 31.69s -> latency-set    set    55 60 01 40 f0 01 00 01 02 10 33
+ 31.71s <- latency-set    ack    55 60 01 40 70 00 00 01 3e 10
+ 32.70s -> anc            get    55 60 01 1e c0 00 00 01 b1 1d
+ 32.70s -> latency        get    55 60 01 41 c0 00 00 01 25 10
+ 32.71s <- anc            answer 55 60 01 1e 40 06 00 01 01 04 00 02 04 00 88 ba   mode adaptive level=adaptive
+ 32.72s <- latency        answer 55 60 01 41 40 01 00 01 02 50 38   low latency off

@@ -1,0 +1,35 @@
+Owner: adilahmad17
+Model: CMF Headphone Pro
+Date: 2026-09-08
+Source: bluetoothctl 5.87, 'info <address>', verbatim.
+
+Device 2C:BE:EE:3C:6F:FE (public)
+	Name: CMF Headphone Pro
+	Alias: CMF Headphone Pro
+	Class: 0x00240404 (2360324)
+	Icon: audio-headset
+	Paired: yes
+	Bonded: yes
+	Trusted: yes
+	Blocked: no
+	Connected: yes
+	LegacyPairing: no
+	CablePairing: no
+	UUID: Service Discovery Serve.. (00001000-0000-1000-8000-00805f9b34fb)
+	UUID: Serial Port               (00001101-0000-1000-8000-00805f9b34fb)
+	UUID: Audio Sink                (0000110b-0000-1000-8000-00805f9b34fb)
+	UUID: A/V Remote Control Target (0000110c-0000-1000-8000-00805f9b34fb)
+	UUID: Advanced Audio Distribu.. (0000110d-0000-1000-8000-00805f9b34fb)
+	UUID: A/V Remote Control        (0000110e-0000-1000-8000-00805f9b34fb)
+	UUID: A/V Remote Control Cont.. (0000110f-0000-1000-8000-00805f9b34fb)
+	UUID: Handsfree                 (0000111e-0000-1000-8000-00805f9b34fb)
+	UUID: PnP Information           (00001200-0000-1000-8000-00805f9b34fb)
+	UUID: Generic Audio             (00001203-0000-1000-8000-00805f9b34fb)
+	UUID: Generic Access Profile    (00001800-0000-1000-8000-00805f9b34fb)
+	UUID: Generic Attribute Profile (00001801-0000-1000-8000-00805f9b34fb)
+	UUID: Vendor specific           (0000fdb3-3817-47d9-a10a-1f6656618f8e)
+	UUID: Vendor specific           (66666666-6666-6666-6666-666666666666)
+	UUID: Vendor specific           (aeac4a03-dff5-498f-843a-34487cf133eb)
+	UUID: Vendor specific           (df21fe2c-2515-4fdb-8886-f12c4d67927c)
+	Modalias: bluetooth:v02B0p0000d001F
+	Battery Percentage: 0x0f (15)
