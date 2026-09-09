@@ -145,6 +145,14 @@ class CaptureReplay(unittest.TestCase):
 
 
 class ChannelRegression(unittest.TestCase):
+    def setUp(self):
+        # CI Python may omit Bluetooth constants. All sockets here are fake;
+        # supply only the constants needed to exercise connection/CLI logic.
+        constants = patch.multiple(bridge.socket, AF_BLUETOOTH=31,
+                                   BTPROTO_RFCOMM=3, create=True)
+        constants.start()
+        self.addCleanup(constants.stop)
+
     def connect(self, name, successes):
         attempts, sockets = [], []
         class Candidate(Socket):
@@ -247,6 +255,14 @@ class Lifecycle(unittest.TestCase):
 
 
 class CommandLine(unittest.TestCase):
+    def setUp(self):
+        # CI Python may omit Bluetooth constants. All sockets here are fake;
+        # supply only the constants needed to exercise connection/CLI logic.
+        constants = patch.multiple(bridge.socket, AF_BLUETOOTH=31,
+                                   BTPROTO_RFCOMM=3, create=True)
+        constants.start()
+        self.addCleanup(constants.stop)
+
     def test_optional_model_name_reaches_bridge_and_old_call_is_nameless(self):
         address = "2C:BE:EE:3C:6F:FE"
         for tail in ([], ["CMF Headphone Pro"], ["Nothing Ear (a)"]):
