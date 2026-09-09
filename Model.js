@@ -489,7 +489,8 @@ function uuidsFromBluetoothctl(text) {
 // generation from sonyUuidFor(), "name" the name the headset reports (which
 // picks its row in the bridge's MODELS), "bleAddress" and "modelId" the two
 // things the Fast Pair stream announces. A bridge that gets one argument
-// today keeps getting one: the list is what the bridge was always sent.
+// today keeps getting one unless its model selection needs the reported name.
+// Nothing accepts that name optionally; a nameless caller retains channel 15.
 var BACKENDS = [
   { name: "sony", bridge: "sony-bridge",
     uuids: [SONY_MDR_V2_UUID, SONY_MDR_V1_UUID],
@@ -498,7 +499,7 @@ var BACKENDS = [
   { name: "samsung", bridge: "samsung-bridge",
     uuids: [SAMSUNG_SPP_UUID], args: ["address"] },
   { name: "nothing", bridge: "nothing-bridge",
-    uuids: [NOTHING_NT_LINK_UUID], args: ["address"] },
+    uuids: [NOTHING_NT_LINK_UUID], args: ["address", "name"] },
   { name: "xiaomi", bridge: "xiaomi-bridge",
     uuids: [CSR_GAIA_UUID], args: ["address"] },
   { name: "soundcore", bridge: "soundcore-bridge",
@@ -559,8 +560,8 @@ function bridgeFor(backend) {
 }
 
 // The bridge's command-line arguments, in the row's order, from what the
-// follower knows. A name the follower has no value for goes out as "" — for
-// sony-bridge that is the nameless caller, which gets the old frames.
+// follower knows. An unavailable name goes out as "": Sony keeps its old
+// frames, Nothing its old channel-15-only connection path.
 function bridgeArgs(backend, values) {
   var row = backendRow(backend)
   if (!row) return []

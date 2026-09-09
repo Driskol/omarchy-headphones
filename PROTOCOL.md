@@ -906,14 +906,20 @@ aeac4a03-dff5-498f-843a-34487cf133eb   NT Link   <- Ear (a) on channel 15; the E
                                                     protocol, and the CMF Headphone Pro on 28
 ```
 
-**Opening it.** The channel is one of a short fixed set, so there is no SDP
-lookup to ask BlueZ for: the bridge opens an `AF_BLUETOOTH` / `BTPROTO_RFCOMM`
-socket straight to `(address, channel)`, trying 15 (the earbuds) and then 28
-(the CMF Headphone Pro) in that order — a device that answers on 15 never sees
-a connect to 28. The first connect after the device pairs or reconnects is
-often refused; a retry a second and a half later is not. The Ear (a) trace went
-through `org.bluez.Profile1` with the UUID and `Channel: 15` instead and landed
-on the same socket.
+**Opening it.** The bridge opens an `AF_BLUETOOTH` / `BTPROTO_RFCOMM`
+socket directly. Its optional second argument is the name reported by the
+headset, already available to the follower. `MODELS` selects the channel
+before any connect: known legacy Nothing models retain 15 on every retry;
+CMF Headphone Pro uses 28. An unknown name gets `(15, 28)` discovery, while
+an absent name retains the old channel-15-only call. Matching ignores case,
+outer whitespace and the optional Nothing brand prefix; it does not use a
+user's renamed Alias when the reported name is available.
+
+A refused connection does not change a known model's channel. The first
+connect after pairing or reconnecting is often refused; the existing six
+attempts and 1.5-second retry delay remain. The Ear (a) trace went through
+`org.bluez.Profile1` with the UUID and `Channel: 15` instead and landed on the
+same socket.
 
 **Activation.** Nothing X asks for device info (`06`) first, and r-witz found
 that a fresh session may ignore what follows until it has been asked. The bridge
@@ -1031,8 +1037,8 @@ SDP record: [`docs/captures/nothing-headphone-pro-bluetoothctl.txt`](docs/captur
 It is the same protocol as the earbuds, frame for frame; what is model-specific:
 
 - **Channel 28**, not 15. The SDP record still carries only the NT Link UUID —
-  there is no separate UUID for the headphone — so the channel is the only
-  thing that tells the two apart, and trying 15 first then 28 is how.
+  there is no separate UUID for the headphone. The reported name selects its
+  channel-28 row; the shared UUID still selects the Nothing backend.
 - **Device info** (`40 06`) is ASCII lines, `<kind>,<index>,<value>` separated
   by `0a`: `6,1,1.0.0.2` / `6,2,1.0.1.44` (firmware), `6,4,<serial>`,
   `6,6,<mac>`. The bridge does not read it; it only unlocks the real queries.
@@ -1076,10 +1082,15 @@ tools/nothing_probe.py 3C:B0:ED:AF:7C:30 set-anc high
 tools/nothing_probe.py 3C:B0:ED:AF:7C:30 set-latency on
 ```
 
-It tries channel 15 then 28, the same order the bridge does. The widget's bridge
-holds whichever it found, so turn `useModeControl` off, or disconnect and
-reconnect the headphones with the panel closed, before running it — a second
-RFCOMM client on the channel is refused while the first is up.
+The probe defaults to channel 15 to preserve existing calls. Select 28
+explicitly for CMF (the bridge itself selects by reported model name):
+
+```bash
+tools/nothing_probe.py --channel 28 2C:BE:EE:3C:6F:FE
+```
+
+The widget's bridge holds that same channel, so turn `useModeControl` off
+before probing; a second RFCOMM client is refused while the first is up.
 
 
 ## Soundcore Space 2 — vendor RFCOMM

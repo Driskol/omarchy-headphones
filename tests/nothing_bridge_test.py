@@ -92,9 +92,8 @@ class Silent(unittest.TestCase):
 
 
 class ChannelSelection(unittest.TestCase):
-    """connect() walks RFCOMM_CHANNELS in order. 15 is the earbuds' channel and
-    is tried first, so their path is exactly what it was; 28 is the CMF
-    Headphone Pro's, reached only when 15 refuses."""
+    """Unknown models retain discovery on 15 then 28. Known model and retry
+    isolation are covered in nothing_cmf_test.py."""
 
     def _connect_with(self, open_channels):
         tried = []
@@ -122,7 +121,7 @@ class ChannelSelection(unittest.TestCase):
             BTPROTO_RFCOMM=getattr(real, "BTPROTO_RFCOMM", 3),
             socket=lambda *a, **k: FakeSock(),
         )
-        bridge = bridge_module.Bridge("2C:BE:EE:3C:6F:FE")
+        bridge = bridge_module.Bridge("2C:BE:EE:3C:6F:FE", "Unknown NT Link model")
         saved_socket = bridge_module.socket
         saved_attempts = bridge_module.CONNECT_ATTEMPTS
         bridge_module.socket = fake
@@ -166,8 +165,8 @@ class CmfFrames(unittest.TestCase):
     through the framer and the parsers. Noise control on this headset is the
     six-byte triplet form 01 <mode> 00 02 <level> 00."""
 
-    ANC_ADAPTIVE = bridge_module.frame(0x1E, 0x40, harness.hexbytes("01 04 00 02 04 00"))
-    BATTERY_15 = bridge_module.frame(0x07, 0x40, harness.hexbytes("01 06 0f"))
+    ANC_ADAPTIVE = harness.hexbytes("55 60 01 1e 40 06 00 01 01 04 00 02 04 00 88 ba")
+    BATTERY_15 = harness.hexbytes("55 60 01 07 40 03 00 01 01 06 0f 0b 8e")
 
     def test_a_real_answer_survives_being_split_at_every_byte_boundary(self):
         for cut in range(1, len(self.ANC_ADAPTIVE)):

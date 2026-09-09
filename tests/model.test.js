@@ -932,8 +932,14 @@ Deno.test("bridgeArgs is what each bridge was always sent", () => {
     Model.bridgeArgs("sony", { address: "94:DB:56:D0:F0:F0", uuid: Model.SONY_MDR_V2_UUID }),
     ["94:DB:56:D0:F0:F0", Model.SONY_MDR_V2_UUID, ""],
   );
+  // Nothing now receives the reported name for channel selection.
+  assertEquals(Model.bridgeArgs("nothing", { address: known.address, name: "CMF Headphone Pro" }),
+    [known.address, "CMF Headphone Pro"]);
+  assertEquals(Model.bridgeArgs("nothing", { address: known.address, name: "Nothing Ear (a)" }),
+    [known.address, "Nothing Ear (a)"]);
+  assertEquals(Model.bridgeArgs("nothing", { address: known.address }), [known.address, ""]);
   // Every other classic bridge: the address alone.
-  for (const name of ["samsung", "nothing", "xiaomi", "soundcore", "oppo"]) {
+  for (const name of ["samsung", "xiaomi", "soundcore", "oppo"]) {
     assertEquals(Model.bridgeArgs(name, known), ["94:DB:56:D0:F0:F0"], name);
   }
   // jbl-bridge: the BLE address and the Fast Pair model.
