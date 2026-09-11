@@ -31,23 +31,36 @@ and called observed. The real loop's info timeout is exercised separately.
 The earlier framing tests now use complete captured ANC/battery literals
 instead of asking the encoder under test to manufacture incoming packets.
 
-## Owner check needed before merge
+## Owner confirmation for 1.3.1
 
-This follow-up has not been run on CMF hardware by the maintainer. Please
-confirm these steps on the updated PR branch, using the existing test setup:
+On 2026-09-11, [@adilahmad17 confirmed commit 22497ef on his CMF Headphone Pro](https://github.com/ncr/omarchy-headphones/pull/12#issuecomment-5627277481)
+and accepted the review changes, including the channel-selection tests.
+He copied the changed bridge, Model.js, DeviceFollower.qml and probe into his
+plugin and restarted the shell. The maintainer has not independently tested CMF.
 
-1. Record the initial mode, ANC strength, latency and battery reading. Confirm
-   the Bluetooth **Name**, not just Alias, is `CMF Headphone Pro`.
-2. Connect normally and confirm the mode controls and single battery appear.
-   The bridge should connect directly on 28. Repeat after a disconnect and
-   reconnect and confirm the controls recover.
-3. Through the panel, set Off, Ambient and ANC; then Low, Mid, High and
-   Adaptive; then low latency on and off. Record the reported results after
-   each change, not just that the click was accepted.
-4. Restore the original settings. Report the tested commit, any failures,
-   and whether another connected device remained unaffected, if available.
+- Bluetooth Name, not just Alias: `CMF Headphone Pro`.
+- Initial state: ANC / Adaptive, low latency off, battery 20%.
+- Normal connection: named bridge invocation selects only channel 28; mode
+  controls and a single battery appeared. No earbud or case components.
+- Disconnect/reconnect: controls recovered in about six seconds, returning to
+  ANC / Adaptive / latency off. A brief unsupported state occurred while the
+  first connection attempts were refused and retried.
+- Panel sweep: Off / Ambient / ANC, Low / Mid / High / Adaptive and low latency
+  on / off each produced the expected reported state.
+- Restoration: original ANC / Adaptive / latency-off settings restored.
 
-Charging, acoustic effects, radio timing and firmware variants remain outside
-these software checks. Another headset is optional; mark its isolation check
-untested if unavailable. The version remains 1.3.0 until owner confirmation
-and successful CI permit the merge and patch release.
+PR CI passed for that same commit. The release changes after 22497ef update
+README, metadata and this record; they do not alter the tested bridge or QML.
+
+## Remaining limits
+
+Second-connected-device isolation was not completed: the other available
+headset was another CMF model outside this PR, and Headphone Pro powered off
+at low battery before an unrelated headset could be used. Charging-state
+frames, acoustic effects, radio timing and firmware variants remain untested.
+Software isolation and fault checks do not substitute for those hardware tests.
+
+The gallery retains the owner's original 1120×840 screenshot. Its fixed-height
+crop cuts through the low-latency row. No missing UI or hardware evidence has
+been reconstructed; the complete control sweep is documented in the linked
+owner confirmation above.

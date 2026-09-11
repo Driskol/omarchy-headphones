@@ -21,7 +21,9 @@ reads its stdout line by line and acts on its exit code.
 
 The Classic-channel bridges take the device's Bluetooth address. `sony-bridge`
 takes the MDR UUID to register after it and the name the headset reports after
-that; `jbl-bridge` takes the BLE address the Fast Pair stream announced and the
+that. `nothing-bridge` takes the reported name after the address to select
+its model-specific RFCOMM channel; omitting the name retains channel 15.
+`jbl-bridge` takes the BLE address the Fast Pair stream announced and the
 Fast Pair model id. A bridge validates its arguments before doing anything
 else: an address that is not one is exit 4 with an error line, never a string
 handed to BlueZ or a child process.

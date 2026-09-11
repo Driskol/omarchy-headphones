@@ -1,6 +1,6 @@
 # Omaphones for Omarchy
 
-<p align="center"><b>JBL</b> &nbsp;·&nbsp; <b>Sony</b> &nbsp;·&nbsp; <b>Samsung</b> &nbsp;·&nbsp; <b>Nothing</b> &nbsp;·&nbsp; <b>Soundcore</b> &nbsp;·&nbsp; <b>Xiaomi</b> &nbsp;·&nbsp; <b>OPPO</b></p>
+<p align="center"><b>JBL</b> &nbsp;·&nbsp; <b>Sony</b> &nbsp;·&nbsp; <b>Samsung</b> &nbsp;·&nbsp; <b>Nothing / CMF</b> &nbsp;·&nbsp; <b>Soundcore</b> &nbsp;·&nbsp; <b>Xiaomi</b> &nbsp;·&nbsp; <b>OPPO</b></p>
 
 <p align="center"><b>Battery levels and noise-cancellation control for Bluetooth headphones, in the Omarchy bar.</b></p>
 
@@ -81,11 +81,11 @@ Headphones not on the list? [Add yours](#add-your-own-headphones).
 
 <table>
 <tr>
-<td width="50%"><img src="docs/gallery/cmf-headphone-pro.png" alt="CMF Headphone Pro: one battery, Off / ANC / Ambient, the ANC level row (Low / Mid / High / Adaptive) and low latency" width="100%"></td>
+<td width="50%"><img src="docs/gallery/cmf-headphone-pro.png" alt="CMF Headphone Pro: one battery, Off / ANC / Ambient, the ANC level row (Low / Mid / High / Adaptive) and the partially cropped low-latency row" width="100%"></td>
 <td width="50%"></td>
 </tr>
 <tr>
-<td align="center">CMF Headphone Pro — <a href="https://github.com/adilahmad17">@adilahmad17</a></td>
+<td align="center">CMF Headphone Pro — <a href="https://github.com/adilahmad17">@adilahmad17</a><br><small>Original capture; low-latency row partly cropped.</small></td>
 <td align="center"></td>
 </tr>
 </table>
@@ -98,9 +98,9 @@ Headphones not on the list? [Add yours](#add-your-own-headphones).
   headphones, filling up as they charge. Readable from the bar without opening
   anything.
 - **Noise control** — Off / ANC / Ambient / TalkThru, from the panel or a key.
-  JBL, Sony, Samsung, Nothing, Soundcore, Xiaomi Buds 5 Pro and OPPO Enco Air3 Pro today; built to learn
+  JBL, Sony, Samsung, Nothing / CMF, Soundcore, Xiaomi Buds 5 Pro and OPPO Enco Air3 Pro today; built to learn
   your brand. Sony and Soundcore add the ambient level with Focus on Voice or
-  wind noise reduction; Nothing the ANC strength (Low / Mid / High / Adaptive)
+  wind noise reduction; Nothing / CMF the ANC strength (Low / Mid / High / Adaptive)
   and a low-latency switch.
 - **Pause when you take them off, resume when you put them back on** — on a
   headset with a wear sensor (confirmed on the Sony WH-1000XM6). Only the
@@ -138,6 +138,10 @@ same idea, built for Apple's own protocol, and the plugin this one is modelled o
 | Nothing Ear · Headphone (1) | <img src="docs/icons/yes.svg" width="14" alt="yes"> expected (one figure on Headphone (1)) | <img src="docs/icons/yes.svg" width="14" alt="yes"> expected — same protocol, per [omarchy-nothing-ear](https://github.com/r-witz/omarchy-nothing-ear) | — |
 | soundcore Space One Pro (A3062, over-ear) | <img src="docs/icons/yes.svg" width="14" alt="yes"> one figure | <img src="docs/icons/yes.svg" width="14" alt="yes"> Off · ANC · Ambient (level, wind noise reduction) | [@sasiruLK](https://github.com/sasiruLK) |
 | other Fast Pair headphones  | <img src="docs/icons/yes.svg" width="14" alt="yes"> expected          | <img src="docs/icons/unknown.svg" width="14" alt="untested">                                    | —                              |
+
+CMF Headphone Pro's connection, reconnect recovery and all panel controls were
+[confirmed on hardware by its owner](https://github.com/ncr/omarchy-headphones/pull/12#issuecomment-5627277481).
+See [the test record and remaining limits](docs/CMF-REVIEW.md).
 
 ## Add your own headphones
 
@@ -243,8 +247,8 @@ Keys, while the panel is open (the panel lists them itself, bottom rows):
 | `o` `n` `a` `t` | Off · ANC · Ambient · TalkThru — only the modes this device has |
 | `[` `]` | Ambient level down / up (Sony 0-20, Soundcore 1-5) |
 | `f` | Focus on voice (Sony) / wind noise reduction (Soundcore) on / off |
-| `1` `2` `3` `4` | ANC strength: Low · Mid · High · Adaptive (Nothing) — turns ANC on at it |
-| `g` | Low latency on / off (Nothing) |
+| `1` `2` `3` `4` | ANC strength: Low · Mid · High · Adaptive (Nothing / CMF) — turns ANC on at it |
+| `g` | Low latency on / off (Nothing / CMF) |
 | `r` | Ask the device again |
 | `,` `.` | Previous / next connected set |
 | `b` `v` | Bluetooth panel / Audio panel |
@@ -262,8 +266,8 @@ Everything is reachable over IPC — `omarchy-shell omaphones <method>`:
 | `mode` · `setMode <m>` | `off` `anc` `ambient` `talkthru`, or `pending` / `unsupported` · `ok` / `busy` / `unavailable` |
 | `ambientLevel` · `setAmbientLevel <n>` | 0-20 (Sony), 1-5 (Soundcore) |
 | `ambientVoice` · `setAmbientVoice on\|off` | `on` / `off` — Focus on voice (Sony), wind noise reduction (Soundcore) |
-| `ancLevel` · `setAncLevel <l>` | `low` `mid` `high` `adaptive` (Nothing); setting one turns ANC on |
-| `latency` · `setLatency on\|off` | `on` / `off` (Nothing) |
+| `ancLevel` · `setAncLevel <l>` | `low` `mid` `high` `adaptive` (Nothing / CMF); setting one turns ANC on |
+| `latency` · `setLatency on\|off` | `on` / `off` (Nothing / CMF) |
 | `worn` | `worn` / `not worn`, or `unsupported` for a device with no wear sensor |
 | `refresh` | ask the device again |
 | `open` · `close` · `toggle` | the panel |
