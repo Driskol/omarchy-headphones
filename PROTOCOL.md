@@ -887,7 +887,7 @@ tools/xiaomi_probe.py 64:8F:DB:87:06:CB 15 set:ambient
 Turn `useModeControl` off first: SPP is one holder, like Sony's UUID.
 
 
-## Nothing NT Link — the Nothing X protocol on RFCOMM channel 15
+## Nothing NT Link — the Nothing X protocol on RFCOMM (channel 15, or 28)
 
 A fourth channel, and the first one read from other people's work rather than
 off a headset on this desk. What follows is what three clients agree on —
@@ -901,16 +901,25 @@ hardware (the SDP UUID, the frame layout confirmed on the wire, the gallery
 screenshot). Where the three differ, both readings are handled below.
 
 ```
-aeac4a03-dff5-498f-843a-34487cf133eb   NT Link   <- Ear (a); the Ear (2), Ear, Ear (stick) and
-                                                    Headphone (1) speak the same protocol
+aeac4a03-dff5-498f-843a-34487cf133eb   NT Link   <- Ear (a) on channel 15; the Ear (2), Ear,
+                                                    Ear (stick) and Headphone (1) speak the same
+                                                    protocol, and the CMF Headphone Pro on 28
 ```
 
-**Opening it.** The channel number is fixed at 15, so there is no SDP lookup to
-ask BlueZ for: the bridge opens an `AF_BLUETOOTH` / `BTPROTO_RFCOMM` socket
-straight to `(address, 15)`. The first connect after the device pairs or
-reconnects is often refused; a retry a second and a half later is not. The
-Ear (a) trace went through `org.bluez.Profile1` with the UUID and `Channel: 15`
-instead and landed on the same socket.
+**Opening it.** The bridge opens an `AF_BLUETOOTH` / `BTPROTO_RFCOMM`
+socket directly. Its optional second argument is the name reported by the
+headset, already available to the follower. `MODELS` selects the channel
+before any connect: known legacy Nothing models retain 15 on every retry;
+CMF Headphone Pro uses 28. An unknown name gets `(15, 28)` discovery, while
+an absent name retains the old channel-15-only call. Matching ignores case,
+outer whitespace and the optional Nothing brand prefix; it does not use a
+user's renamed Alias when the reported name is available.
+
+A refused connection does not change a known model's channel. The first
+connect after pairing or reconnecting is often refused; the existing six
+attempts and 1.5-second retry delay remain. The Ear (a) trace went through
+`org.bluez.Profile1` with the UUID and `Channel: 15` instead and landed on the
+same socket.
 
 **Activation.** Nothing X asks for device info (`06`) first, and r-witz found
 that a fresh session may ignore what follows until it has been asked. The bridge
@@ -1018,6 +1027,49 @@ and sends it as `caseStale`, which the panel dims.
 Exit codes match the other bridges: 0 clean, 1 transient (the socket refused or
 closed), 3 silent (open, but the noise-control query went unanswered), 4 setup.
 
+### CMF Headphone Pro — RFCOMM channel 28
+
+Read off the hardware by [@adilahmad17](https://github.com/adilahmad17), one
+continuous session on 28 (channel 15 is refused): the initial read, every mode
+and ANC level and the low-latency switch, each set followed by a read-back, then
+a restore. Capture: [`docs/captures/nothing-headphone-pro.txt`](docs/captures/nothing-headphone-pro.txt),
+SDP record: [`docs/captures/nothing-headphone-pro-bluetoothctl.txt`](docs/captures/nothing-headphone-pro-bluetoothctl.txt).
+It is the same protocol as the earbuds, frame for frame; what is model-specific:
+
+- **Channel 28**, not 15. The SDP record still carries only the NT Link UUID —
+  there is no separate UUID for the headphone. The reported name selects its
+  channel-28 row; the shared UUID still selects the Nothing backend.
+- **Device info** (`40 06`) is ASCII lines, `<kind>,<index>,<value>` separated
+  by `0a`: `6,1,1.0.0.2` / `6,2,1.0.1.44` (firmware), `6,4,<serial>`,
+  `6,6,<mac>`. The bridge does not read it; it only unlocks the real queries.
+- **Battery** (`40 07`) is a single pair, component `06` — `01 06 0f` is the
+  one headset battery at 15%. No `02`/`03`/`04`, as expected for an over-ear
+  set; the case components never appear.
+- **Noise control** answers and events are the six-byte triplet form
+  `01 <mode> 00 02 <level> 00` — r-witz's `(kind, value, 0)` reading, not the
+  bare `01 <mode> 00`. Every value in the table above was seen: `05` off,
+  `07` transparency, and `01`–`04` for High / Mid / Low / Adaptive, each in
+  both the `40 1E` read-back and an `E0 03` announcement. Setting a numbered
+  strength moves the `02 <level>` byte with the mode byte; setting `off` or
+  `ambient` leaves the last strength in the `02` slot. Set payloads are the
+  bridge's existing `01 <byte> 00`.
+- **Low latency** (`C0 41`): `40 41` payload `01` on, `02` off (an unset device
+  answered `00`, read as off). Set `F0 40` payload `01` on / `02` off. Confirmed
+  both ways.
+- **Ack**: `70 0F` for a noise-control set, `70 40` for a low-latency set — no
+  payload, the read-back carries the new state.
+- **`E0 01`** battery announcements arrive unprompted every few seconds; **`E0 03`**
+  follows every mode change, the device's own and the widget's alike.
+- Two frames are seen and not parsed: **`E0 19`** (`55 00 03 19 e0 …`), a short
+  event that arrives once at session start, and a **`09`** frame on ctrl
+  `0x0660` with a direction byte of `7c`. Neither is a get/answer/ack the
+  bridge asked for; both are ignored. They are recorded here because they were
+  on the wire, not because their meaning is known.
+- Some events use ctrl `0x0300` (`55 00 03 …`), where bit `0x20` is clear and
+  **no CRC follows**; the framer already keys the trailer off that bit, so both
+  forms parse.
+- The `29` codec flag answered `00` and is left alone, as on the earbuds.
+
 ### The probe
 
 [`tools/nothing_probe.py`](tools/nothing_probe.py) — opens the socket, sends
@@ -1030,9 +1082,15 @@ tools/nothing_probe.py 3C:B0:ED:AF:7C:30 set-anc high
 tools/nothing_probe.py 3C:B0:ED:AF:7C:30 set-latency on
 ```
 
-The widget's bridge holds the same channel, so turn `useModeControl` off, or
-disconnect and reconnect the earbuds with the panel closed, before running it —
-a second RFCOMM client on channel 15 is refused while the first is up.
+The probe defaults to channel 15 to preserve existing calls. Select 28
+explicitly for CMF (the bridge itself selects by reported model name):
+
+```bash
+tools/nothing_probe.py --channel 28 2C:BE:EE:3C:6F:FE
+```
+
+The widget's bridge holds that same channel, so turn `useModeControl` off
+before probing; a second RFCOMM client is refused while the first is up.
 
 
 ## Soundcore Space 2 — vendor RFCOMM

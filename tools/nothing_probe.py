@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Probe the Nothing NT Link channel: ask for everything, print every frame.
 
-Usage: nothing_probe.py <address> [set-anc <off|low|mid|high|adaptive|transparency>
+Usage: nothing_probe.py [--channel 15|28] <address> [set-anc <off|low|mid|high|adaptive|transparency>
                                    | set-latency <on|off>]
 
-Opens an RFCOMM socket to channel 15, sends the device-info, battery,
+Opens an RFCOMM socket to the selected channel (default 15; CMF uses 28), sends the device-info, battery,
 noise-control and low-latency gets, and prints each frame in both directions —
 raw and decoded — for a few seconds. With a `set-…` argument it writes that
 setting afterwards and asks for the state again, so the ack and the read-back
@@ -15,12 +15,12 @@ The widget's bridge holds the same channel while the earbuds are connected and
 noise control is on, and the second client is refused: switch `useModeControl`
 off first, or reconnect the earbuds with the panel closed.
 """
+import argparse
 import socket
 import struct
 import sys
 import time
 
-RFCOMM_CHANNEL = 15
 SOF = 0x55
 CTRL_WITH_CRC = 0x0160
 
@@ -136,25 +136,31 @@ def main():
     if not argv:
         print(__doc__.strip())
         return 2
-    address = argv[0]
-    action = argv[1] if len(argv) > 1 else ""
-    value = argv[2] if len(argv) > 2 else ""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--channel", type=int, choices=(15, 28), default=15)
+    parser.add_argument("address")
+    parser.add_argument("action", nargs="?", default="")
+    parser.add_argument("value", nargs="?", default="")
+    args = parser.parse_args(argv)
+    address, action, value = args.address, args.action, args.value
 
     sock = None
+    channel = args.channel
     for attempt in range(4):
+        if attempt:
+            time.sleep(1.5)
         sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
         sock.settimeout(5.0)
         try:
-            sock.connect((address, RFCOMM_CHANNEL))
+            sock.connect((address, channel))
             break
         except OSError as error:
             sock.close()
             sock = None
-            print(stamp(), "connect attempt %d: %s" % (attempt + 1, error))
-            time.sleep(1.5)
+            print(stamp(), "connect attempt %d, channel %d: %s" % (attempt + 1, channel, error))
     if sock is None:
         return 1
-    print(stamp(), "connected to channel %d" % RFCOMM_CHANNEL)
+    print(stamp(), "connected to channel %d" % channel)
 
     try:
         send(sock, 0x06, 0xC0)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Hold one RFCOMM link to Nothing earbuds or headphones and mirror what they say.
 
-    nothing-bridge <classic-address>
+    nothing-bridge <classic-address> [<device-name>]
 
 Prints one JSON object per line, and reads one command per line:
 
@@ -27,12 +27,13 @@ Exit codes, which the shell-side service reads to decide what to do next:
         About this machine, not about the device
 
 Sibling of sony-bridge and xiaomi-bridge: the same stdout/stdin/exit-code
-contract, a different channel. Nothing serves its own RFCOMM channel (15) for
-the Nothing X protocol, and advertises the NT Link UUID
+contract, a different channel. Nothing serves its own RFCOMM channel for the
+Nothing X protocol, and advertises the NT Link UUID
 (aeac4a03-dff5-498f-843a-34487cf133eb) in its SDP record, which is how the
 widget picks this backend. The socket is opened directly rather than through
-an org.bluez.Profile1: the channel number is fixed, so there is no SDP lookup
-to ask BlueZ for.
+an org.bluez.Profile1. The reported device name selects the channel before
+connecting: the known earbuds keep 15, CMF Headphone Pro uses 28. Only an
+unrecognised name tries both. A caller without a name keeps channel 15.
 
 The vocabulary is the panel's, not Nothing's. Nothing X offers six settings —
 Off, Transparency, and noise cancelling at Low, Mid, High or Adaptive — and
@@ -74,10 +75,31 @@ import struct
 import sys
 import time
 
-USAGE = "usage: nothing-bridge <classic-address>"
+USAGE = "usage: nothing-bridge <classic-address> [<device-name>]"
 ADDRESS = re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
 
-RFCOMM_CHANNEL = 15
+# Keyed by the reported name, case-insensitive and without the optional
+# Nothing brand prefix. Known legacy models retain channel 15 on every retry.
+MODELS = {
+    "ear (a)": {"channels": (15,)},
+    "ear": {"channels": (15,)},
+    "ear (2)": {"channels": (15,)},
+    "ear (stick)": {"channels": (15,)},
+    "headphone (1)": {"channels": (15,)},
+    "cmf headphone pro": {"channels": (28,)},
+}
+UNKNOWN = {"channels": (15, 28)}
+NAMELESS = {"channels": (15,)}
+
+
+def model_for(name):
+    key = name.strip().casefold()
+    if not key:
+        return NAMELESS
+    if key.startswith("nothing "):
+        key = key[len("nothing "):]
+    return MODELS.get(key, UNKNOWN)
+
 
 SOF = 0x55
 CTRL_WITH_CRC = 0x0160
@@ -284,13 +306,15 @@ def write_case_cache(address, level):
 
 
 class Bridge:
-    def __init__(self, address):
+    def __init__(self, address, name=""):
         self.address = address
+        self.model = model_for(name)
         self.sock = None
         self.buffer = bytearray()
         self.pending_stdin = ""
         self.exit_code = None
 
+        self.channel = None
         self.mode = None
         self.level = None
         self.latency = None
@@ -314,18 +338,20 @@ class Bridge:
         for attempt in range(CONNECT_ATTEMPTS):
             if attempt:
                 time.sleep(CONNECT_RETRY)
-            sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM,
-                                 socket.BTPROTO_RFCOMM)
-            sock.settimeout(CONNECT_TIMEOUT)
-            try:
-                sock.connect((self.address, RFCOMM_CHANNEL))
-            except OSError as error:
-                sock.close()
-                last_error = error
-                continue
-            sock.setblocking(False)
-            self.sock = sock
-            return True
+            for channel in self.model["channels"]:
+                sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM,
+                                     socket.BTPROTO_RFCOMM)
+                sock.settimeout(CONNECT_TIMEOUT)
+                try:
+                    sock.connect((self.address, channel))
+                except OSError as error:
+                    sock.close()
+                    last_error = error
+                    continue
+                sock.setblocking(False)
+                self.sock = sock
+                self.channel = channel
+                return True
         reason = getattr(last_error, "strerror", None) or str(last_error)
         self.finish(EXIT_TRANSIENT, "cannot open the Nothing channel: %s" % reason)
         return False
@@ -553,7 +579,7 @@ def main():
               "error": "this Python was built without Bluetooth sockets"})
         return EXIT_SETUP
 
-    bridge = Bridge(address)
+    bridge = Bridge(address, argv[1] if len(argv) > 1 else "")
 
     def stop(*_args):
         raise Stop()

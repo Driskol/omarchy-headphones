@@ -735,7 +735,8 @@ Item {
     // The arguments are the backend's row in BACKENDS: every classic bridge
     // takes the address; sony-bridge takes the UUID after it, and defaults to
     // v2 without one, which is what it was always sent, and then the reported
-    // name, which picks its row in the bridge's MODELS.
+    // name, which picks its row in the bridge's MODELS. Nothing also takes
+    // the reported name, to keep each known model on its own RFCOMM channel.
     command: follower.classicBridgePath === ""
       ? ["true"]
       : [follower.classicBridgePath].concat(Model.bridgeArgs(follower.controlBackend, {
