@@ -1,6 +1,6 @@
 # Omaphones for Omarchy
 
-<p align="center"><b>JBL</b> &nbsp;·&nbsp; <b>Sony</b> &nbsp;·&nbsp; <b>Samsung</b> &nbsp;·&nbsp; <b>Nothing / CMF</b> &nbsp;·&nbsp; <b>Soundcore</b> &nbsp;·&nbsp; <b>Xiaomi</b> &nbsp;·&nbsp; <b>OPPO</b></p>
+<p align="center"><b>JBL</b> &nbsp;·&nbsp; <b>Sony</b> &nbsp;·&nbsp; <b>Samsung</b> &nbsp;·&nbsp; <b>Nothing / CMF</b> &nbsp;·&nbsp; <b>Soundcore</b> &nbsp;·&nbsp; <b>Xiaomi</b> &nbsp;·&nbsp; <b>OPPO</b> &nbsp;·&nbsp; <b>Bose</b></p>
 
 <p align="center"><b>Battery levels and noise-cancellation control for Bluetooth headphones, in the Omarchy bar.</b></p>
 

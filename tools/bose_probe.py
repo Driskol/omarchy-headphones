@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Probe the Bose BMAP channel on a headset: init, GETs, mode switches.
+"""Diagnostic Profile1 probe: these UUID paths did not reach QC45 BMAP.
+
+For a QC45 capture with state restoration, use bose_session.py.
+This diagnostic sends a mode write only with explicit set:<n>; it does not
+restore that write, so prefer bose_session.py for control tests.
 
 Usage: bose_probe.py <address> [seconds] [set:<mode-index>] [uuid:...]
 
@@ -56,7 +60,7 @@ class Link:
                           GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, self.on_io)
         # QC45 (duran) answers nothing until it has seen a GET of [0.1].
         self.send(bytes([0x00, 0x01, 0x01, 0x00]), "[0.1] init GET")
-        GLib.timeout_add(200, self.pump)
+        GLib.timeout_add(4000, self.pump)
 
     def send(self, frame, label):
         print("%s >>> %-28s %s" % (stamp(), label, frame.hex()), flush=True)
@@ -71,7 +75,7 @@ class Link:
         item = self.queue.pop(0)
         frame, label = item
         self.send(frame, label)
-        return False
+        return bool(self.queue)
 
     def on_io(self, fd, cond):
         if cond & (GLib.IO_HUP | GLib.IO_ERR):
@@ -123,7 +127,7 @@ def main():
         sys.exit("usage: bose_probe.py <address> [seconds] [set:<n>] [uuid:...]")
     address = sys.argv[1]
     rest = sys.argv[2:]
-    seconds = int(rest[0]) if rest and rest[0].isdigit() else 20
+    seconds = int(rest[0]) if rest and rest[0].isdigit() else 40
     setting = None
     uuid = BMAP_UUID
     for arg in rest:
@@ -192,11 +196,15 @@ def main():
     GLib.timeout_add(500, connect)
     loop = GLib.MainLoop()
     GLib.timeout_add_seconds(seconds, lambda: (loop.quit(), False)[1])
-    loop.run()
     try:
+        loop.run()
+    finally:
+        if "l" in link:
+            try:
+                os.close(link["l"].fd)
+            except OSError:
+                pass
         manager.UnregisterProfile(PROFILE_PATH)
-    except dbus.DBusException:
-        pass
     print("%s == done" % stamp(), flush=True)
 
 

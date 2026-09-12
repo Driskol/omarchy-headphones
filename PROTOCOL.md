@@ -1454,14 +1454,12 @@ iAP2-style DETECT prelude (`ff 55 02 00 ee 10` every second) and the
 and the QC45's own quirk — BMAP rides on the channel its service record never
 states) and asks `[0.1]` until the headset answers.
 
-BMAP frames are `[fblock u8][func u8][flags u8][len u8][payload]`; the
-operator is the low nibble of `flags`: SET=0 GET=1 SETGET=2 STATUS=3 ERROR=4
-START=5 RESULT=6 PROCESSING=7. Function block `0x01` is the init, `0x02` the
-headset itself, `0x1f` the noise-cancellation hub. The QC45 answers a GET in
-10-19 ms, acked a START with an empty PROCESSING in ~20 ms and lands the switch
-itself ~3 s later — so the bridge reads the mode back after a set instead of
-believing the ack. There are no unsolicited pushes: listening mode and battery
-are polled.
+BMAP frames are `[fblock u8][func u8][flags u8][len u8][payload]`;
+the operator is the low nibble of flags. Init is function 1 of block 0;
+block 2 reports battery and block 31 controls modes. The stored capture
+prints decoded replies after a collection window, so it does not establish
+individual response or switching latency. START's PROCESSING is not mode
+confirmation: the bridge polls for the device's current-mode STATUS.
 
 ### Frames
 
@@ -1479,12 +1477,12 @@ Init — every GET answers only after this, and the answer is the probe:
 <-  1f 03 03 01 01             [31.3] STATUS: mode index 1
 ```
 
-`[31.3]` START sets the index; the switch takes ~3 s and the readback GET is
+`[31.3]` START sets the index; the readback GET is
 what the bridge reports:
 
 ```
-->  1f 03 05 02 00 00 -> 1f 03 07 00   [31.3] START idx 0 -> PROCESSING, ~20 ms
-    (3 s later, on the bridge's next poll)
+->  1f 03 05 02 00 00 -> 1f 03 07 00   [31.3] START idx 0 -> PROCESSING
+    (on a subsequent readback)
 ->  1f 03 01 00                      [31.3] GET
 <-  1f 03 03 01 00                   [31.3] STATUS idx 0
 ```
@@ -1504,8 +1502,8 @@ STATUS, `[31.1]` RESULT — the bridge does not send it at runtime.
 <-  02 02 03 04 5a ff ff 00    [2.2] STATUS: 90%, then nothing for earbuds/case
 ```
 
-The level is the first payload byte; the other three are `ff` and not
-per-earbud figures. `{"headset": 90, "charging": []}` is the whole battery on
+The level is the first payload byte; the remaining bytes are `ff ff 00`.
+Their meanings, including charging, are not established by this capture. `{"headset": 90, "charging": []}` is the whole battery on
 this device.
 
 ### In the widget
@@ -1527,13 +1525,23 @@ two queries, the STARTs and the answers above frame for frame, and
 
 ### The capture
 
-[`docs/captures/bose-qc45.txt`](docs/captures/bose-qc45.txt) is every frame the
-AC:BF:71:64:56:B9 headset answered — init, battery at 90% and 89%, the
-listening-mode GETs and the START→PROCESSING→readback dance for modes 0-3, and
-the raw GET-All burst — taken with
-[`tools/bose_session.py`](tools/bose_session.py) (which restores Aware before it
-exits). The iAP2-DETECT channel's prelude and the silent `9b26d8c0-…` service
-are recorded there too, so the dead ends do not have to be retried.
+[`docs/captures/bose-qc45.txt`](docs/captures/bose-qc45.txt) records decoded
+init, 90% battery, mode GETs, START/PROCESSING/readbacks for indexes 0–3,
+and the GET-All burst. The original session ended with a verified return to
+Aware. RX headers are reconstructed in the pin from decoded fields; the file
+is not a complete raw-byte capture. It does not contain the pin's 89% sample,
+the UUID listing or the claimed failed-channel recordings. These gaps require
+owner evidence; they must not be silently filled in by the reviewer.
+
+The updated [`tools/bose_session.py`](tools/bose_session.py) logs raw chunks
+at receipt, retains partial frames and restores the actual initial mode in
+`finally`, verifying readback or reporting failure. Release mode control
+before using it. Channel 8 is observed on this QC45; fallback candidates 2/9
+remain unverified on it. `bose_probe.py` is a diagnostic for the unsuccessful
+Profile1 route, not the recommended QC45 capture tool.
+
+See [the review and owner checklist](docs/BOSE-REVIEW.md) for test coverage
+and outstanding hardware confirmation.
 
 ## Canonical owner captures — 2026-09-08
 

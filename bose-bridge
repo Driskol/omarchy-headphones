@@ -49,8 +49,8 @@ The parts of the block table the QC45 answered for are the only ones used:
                  frame
     GET  [2.2]   the battery: four bytes, the level in the first
     GET  [31.3]  the current audio-mode index; 0 Quiet (anc), 1 Aware
-                 (ambient) — START [31.3] idx echoes PROCESSING within
-                 ~20 ms and the switch lands a few seconds later, so nothing
+                 (ambient) — START [31.3] idx echoes PROCESSING; the capture
+                 establishes no exact switching latency, so nothing
                  is read back within a command; the poll readback is the
                  source of truth
     START [31.3] switches the mode; payload [idx, voice-prompt-flag 0]
@@ -69,6 +69,7 @@ import signal
 import socket
 import sys
 import time
+import threading
 
 ADDRESS = re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
 USAGE = "usage: bose-bridge <classic-address>"
@@ -98,15 +99,15 @@ def start_mode(index):
 MODE_BY_IDX = {0: "anc", 1: "ambient"}
 AVAILABLE = ["anc", "ambient"]
 
-# RFCOMM channels to ask for BMAP, in order. The QC45 (duran) answers on 8;
-# the QC Ultra 2 (wolverine) answers the same protocol on 2; 9 is another
-# channel bosectl has seen Bose serve the protocol on. Each candidate is
-# confirmed with a real BMAP reply before it is kept, so a wrong guess costs
-# a connection, not a wrong frame.
+# RFCOMM channels to ask for BMAP, in order. The QC45 capture confirms 8.
+# Candidates 2 and 9 came from an external implementation, not this capture;
+# their inclusion is discovery, not confirmed support for another Bose model.
+# Each receives INIT and must return a valid init STATUS before other queries.
 CHANNELS = (8, 2, 9)
 
 # How long a candidate channel gets to answer the [0.1] probe before it is
-# counted silent and the next is tried. 20 ms is what this headset needs.
+# counted silent and the next is tried. This timeout is a policy, not a
+# measured latency: the stored capture prints replies after a collection wait.
 PROBE_TIMEOUT = 1.0
 CONNECT_TIMEOUT = 10.0
 
@@ -120,12 +121,12 @@ POLL_INTERVAL = 4.0
 BATTERY_EVERY = 4
 
 # How long after the socket is up a headset that never answers the mode query
-# is given before the run ends as "linked but silent". A QC45 answers in
-# milliseconds; ten seconds is patience, not permission.
+# is given before the run ends as "linked but silent". Ten seconds is a policy
+# timeout; the stored capture does not measure individual reply latency.
 ANSWER_TIMEOUT = 10.0
 
-# After a set, the switch lands a few seconds after the PROCESSING ack; the
-# first readback goes out early and the poll cadence catches the rest.
+# After a set, schedule a readback; periodic polling follows subsequent
+# changes. These delays are policy, not measured switching latency.
 READBACK_DELAY = 2.0
 
 
@@ -191,6 +192,9 @@ class Bridge:
         self.buffer = bytearray()
         self.pending_stdin = ""
         self.exit_code = None
+        self.stopped = threading.Event()
+        self.candidate = None
+        self.probe_disconnected = False
 
         self.mode = None
         self.battery = None
@@ -214,69 +218,95 @@ class Bridge:
         the protocol. A run where none even opened is exit 1.
         """
         last_error = None
-        any_opened = False
+        any_silent = False
         for attempt in range(CONNECT_ATTEMPTS):
-            if attempt:
-                time.sleep(CONNECT_RETRY)
+            if self.exit_code is not None:
+                return False
+            if attempt and self.stopped.wait(CONNECT_RETRY):
+                return False
             for channel in CHANNELS:
-                sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM,
-                                     socket.BTPROTO_RFCOMM)
-                sock.settimeout(CONNECT_TIMEOUT)
+                if self.exit_code is not None:
+                    return False
+                sock = None
                 try:
+                    sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM,
+                                         socket.BTPROTO_RFCOMM)
+                    self.candidate = sock
+                    sock.settimeout(CONNECT_TIMEOUT)
                     sock.connect((self.address, channel))
+                    if self.exit_code is not None:
+                        return False
+                    if self._speaks_bmap(sock):
+                        if self.exit_code is not None:
+                            return False
+                        sock.setblocking(False)
+                        self.sock = sock
+                        self.channel = channel
+                        return True
+                    any_silent = any_silent or not self.probe_disconnected
                 except OSError as error:
-                    sock.close()
                     last_error = error
-                    continue
-                any_opened = True
-                if self._speaks_bmap(sock):
-                    sock.setblocking(False)
-                    self.sock = sock
-                    self.channel = channel
-                    return True
-                sock.close()
-        reason = getattr(last_error, "strerror", None) or str(last_error)
-        if any_opened:
-            self.finish(EXIT_UNSUPPORTED,
-                        "the headset answered on no Bose BMAP channel")
-        else:
-            self.finish(EXIT_TRANSIENT,
-                        "cannot open the Bose channel: %s" % reason)
+                finally:
+                    self.candidate = None
+                    if sock is not None and sock is not self.sock:
+                        try:
+                            sock.close()
+                        except OSError:
+                            pass
+        if self.exit_code is None:
+            if any_silent:
+                self.finish(EXIT_UNSUPPORTED,
+                            "the headset answered on no Bose BMAP channel")
+            else:
+                reason = str(last_error) if last_error else "the probe connection closed"
+                self.finish(EXIT_TRANSIENT, "cannot open the Bose channel: %s" % reason)
         return False
 
     def _speaks_bmap(self, sock):
-        """Send the [0.1] GET and accept the channel on a BMAP-shaped reply.
+        """Require the init STATUS with a version, preserving following bytes.
 
-        This is the QC45's init as well: it answers nothing until it has seen
-        a GET of [0.1], so the probe that confirms the channel is the same
-        frame that wakes it, and on_open() below does not need to send it
-        again.
+        An echoed GET or an ERROR is not successful initialization. A reset
+        or EOF is a transport failure; an open channel without a valid reply
+        is unsupported. The stored capture supplies the version reply shape.
         """
+        self.probe_disconnected = False
+        raw = bytearray()
         try:
             sock.sendall(INIT)
+            sock.settimeout(0.2)
+            deadline = time.monotonic() + PROBE_TIMEOUT
+            while self.exit_code is None and time.monotonic() < deadline:
+                try:
+                    data = sock.recv(4096)
+                except (socket.timeout, BlockingIOError):
+                    continue
+                if not data:
+                    self.probe_disconnected = True
+                    return False
+                raw += data
+                while len(raw) >= 4 and len(raw) >= 4 + raw[3]:
+                    size = 4 + raw[3]
+                    fblock, func, flags = raw[:3]
+                    payload = bytes(raw[4:size])
+                    del raw[:size]
+                    if ((fblock, func, flags & 0x0f) == (0, 1, OP_STATUS)
+                            and re.fullmatch(rb"[0-9]+\.[0-9]+\.[0-9]+", payload)):
+                        self.buffer += raw
+                        return True
         except OSError:
-            return False
-        sock.settimeout(0.2)
-        raw = b""
-        deadline = time.monotonic() + PROBE_TIMEOUT
-        while time.monotonic() < deadline:
-            try:
-                data = sock.recv(4096)
-            except (socket.timeout, BlockingIOError):
-                continue
-            if not data:
-                return False
-            raw += data
-            buf = bytearray(raw)
-            for fblock, func, _op, _payload in take_frames(buf):
-                if fblock == 0x00 and func == 0x01:
-                    return True
+            self.probe_disconnected = True
         return False
 
     def finish(self, code, message=None):
         if self.exit_code is not None:
             return
         self.exit_code = code
+        self.stopped.set()
+        if self.candidate is not None:
+            try:
+                self.candidate.close()
+            except OSError:
+                pass
         if message:
             emit({"modes": False, "error": message})
 
@@ -296,6 +326,8 @@ class Bridge:
         self.next_poll = self.opened_at + POLL_INTERVAL
         self.send(BATTERY)
         self.send(CURRENT)
+        for frame in take_frames(self.buffer):
+            self.on_frame(*frame)
 
     def poll(self):
         self.polls += 1
@@ -387,7 +419,7 @@ class Bridge:
     # ---- The loop.
 
     def run(self):
-        if not self.connect():
+        if not self.connect() or self.exit_code is not None:
             return self.exit_code
         self.on_open()
         answer_deadline = self.opened_at + ANSWER_TIMEOUT
@@ -441,7 +473,7 @@ def main():
     address = argv[0].strip() if argv else ""
     # There is no other interactive use: the widget is the only caller, so
     # anything that is not an address is a setup failure, reported in the
-    # shape the panel reads and with the exit code that parks it.
+    # shape the panel reads and with the setup-failure exit code.
     if not argv or not ADDRESS.match(address):
         emit({"modes": False,
               "error": "%s (not a Bluetooth address: %r)" % (USAGE, address)})
